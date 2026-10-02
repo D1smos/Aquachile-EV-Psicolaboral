@@ -3,7 +3,7 @@
 ## Equipo de Desarrollo
 * **Vicente Krausse / David Soto**
   * **D1smos**: Desarrollo del frontend, estructura inicial del proyecto, maquetación de interfaces e implementación del formulario de postulación con validaciones.
-  * **mardram**: Configuración de infraestructura inicial del proyecto, gestión de archivos basey enfocado en el desarrollo e integración del backend.
+  * **mardram**: Configuración de infraestructura inicial del proyecto, gestión de archivos base y enfocado en el desarrollo e integración del backend.
 
 ## Descripción del Proyecto
 Plataforma web corporativa diseñada para la gestión integral, seguimiento y análisis de las evaluaciones psicolaborales de los candidatos en los procesos de selección de AquaChile.
