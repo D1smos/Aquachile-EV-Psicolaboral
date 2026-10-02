@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
+
 import Inicio from './pages/publico/Inicio'
+import Postulacion from './pages/publico/Postulacion'
+import Confirmacion from './pages/publico/Confirmacion'
+
 import Dashboard from './pages/empresa/Dashboard'
 
 function App() {
@@ -16,6 +20,16 @@ function App() {
           <Route
             path="/"
             element={<Inicio />}
+          />
+
+          <Route
+            path="/postulacion"
+            element={<Postulacion />}
+          />
+
+          <Route
+            path="/confirmacion"
+            element={<Confirmacion />}
           />
 
           <Route
