@@ -6,6 +6,7 @@ import Postulacion from './pages/publico/Postulacion'
 import Confirmacion from './pages/publico/Confirmacion'
 
 import Dashboard from './pages/empresa/Dashboard'
+import Candidatos from './pages/empresa/Candidatos'
 
 function App() {
   return (
@@ -35,6 +36,11 @@ function App() {
           <Route
             path="/empresa"
             element={<Dashboard />}
+          />
+
+          <Route
+            path="/empresa/candidatos"
+            element={<Candidatos />}
           />
 
         </Routes>
