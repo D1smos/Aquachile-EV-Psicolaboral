@@ -1,34 +1,194 @@
-# Sistema de Evaluación Psicolaboral - AquaChile
+# AquaChile - Sistema de Evaluación Psicolaboral
 
-## Equipo de Desarrollo
-* **Vicente Krausse / David Soto**
-  * **D1smos**: Desarrollo del frontend, estructura inicial del proyecto, maquetación de interfaces e implementación del formulario de postulación con validaciones.
-  * **mardram**: Configuración de infraestructura inicial del proyecto, gestión de archivos base y enfocado en el desarrollo e integración del backend.
+## Descripción
 
-## Descripción del Proyecto
-Plataforma web corporativa diseñada para la gestión integral, seguimiento y análisis de las evaluaciones psicolaborales de los candidatos en los procesos de selección de AquaChile.
+Proyecto académico desarrollado para la asignatura Desarrollo Full Stack II
+(DSY1104), basado en una problemática real presentada por AquaChile.
 
-El sistema centraliza la información de los postulantes y digitaliza el proceso de evaluación psicológica. Permite a los reclutadores y psicólogos del área de Recursos Humanos administrar perfiles, registrar resultados de pruebas y generar informes estructurados para la toma de decisiones.
+El proyecto busca desarrollar un MVP web que permita centralizar la gestión
+de candidatos, solicitudes y evaluaciones psicolaborales.
 
-## Estructura del Repositorio
-* `/frontend`: Contiene el código fuente de la aplicación cliente (interfaz de usuario).
-* `/backend`: Contiene la lógica del servidor, modelos de datos y API REST (Node.js/Express).
-* `.gitignore`: Configuración de exclusión de archivos temporales, dependencias y variables de entorno.
-* `README.md`: Documentación técnica principal del proyecto.
+Actualmente, parte de este proceso se realiza utilizando diferentes
+herramientas y registros, lo que provoca dispersión de información,
+seguimiento manual y tareas repetitivas.
 
-## Módulos Principales (En Desarrollo)
-* **Autenticación y Autorización**: Acceso seguro para reclutadores y psicólogos evaluadores.
-* **Dashboard de Gestión**: Panel de control con el resumen de evaluaciones activas y métricas de postulantes.
-* **Gestión de Candidatos**: Tabla centralizada con el estado del proceso de cada postulante (Pendiente, Aprobado, Rechazado).
-* **Formularios de Evaluación**: Interfaces para la captura de datos, registro de entrevistas y carga de resultados de pruebas psicolaborales.
-* **Generación de Informes**: Vista consolidada del perfil psicolaboral para su revisión y exportación.
+La aplicación busca concentrar el flujo principal dentro de una única
+plataforma web.
 
-## Requisitos Previos
-Para la ejecución del proyecto en un entorno local, se requiere contar con Node.js (versión 18 o superior), el cual incluye por defecto el gestor de paquetes npm.
+---
 
-## Instrucciones de Instalación y Ejecución Local
-1. Clonar el repositorio y acceder al directorio raíz del proyecto.
-2. Ingresar al directorio del frontend e iniciar el cliente:
-   ```bash
-   cd frontend
-   npm run dev
+## Objetivo
+
+Desarrollar una aplicación Full Stack que permita:
+
+- Registrar candidatos.
+- Gestionar solicitudes de evaluación psicolaboral.
+- Registrar cargos y familias de cargo.
+- Asignar responsables.
+- Gestionar estados de las solicitudes.
+- Registrar evaluaciones y observaciones.
+- Consultar candidatos y evaluaciones.
+- Visualizar métricas mediante un Dashboard.
+- Mantener los datos de forma persistente mediante una base de datos.
+
+---
+
+## Flujo general
+
+Candidato
+↓
+Postulación
+↓
+Registro de candidato
+↓
+Solicitud de evaluación
+↓
+Asignación de evaluador
+↓
+Evaluación psicolaboral
+↓
+Actualización de estado
+↓
+Resultado / observaciones
+↓
+Finalización
+
+Estados principales:
+
+- Pendiente
+- En proceso
+- Finalizada
+
+---
+
+## Tecnologías
+
+### Frontend
+
+- React
+- Vite
+- React Router
+- Bootstrap 5
+- JavaScript
+
+### Backend
+
+- Node.js
+- Express
+- API REST
+
+### Base de datos
+
+- PostgreSQL (en implementación)
+
+### Testing
+
+- Jasmine
+- Karma
+
+---
+
+## Arquitectura
+
+Frontend React
+↓
+API REST
+↓
+Backend Node.js / Express
+↓
+PostgreSQL
+
+---
+
+## Integrantes y responsabilidades
+
+### Vicente - Frontend y UX
+
+Responsabilidades principales:
+
+- Desarrollo de interfaces con React.
+- Diseño responsive con Bootstrap.
+- Componentes reutilizables.
+- Navegación con React Router.
+- Formularios y validaciones del cliente.
+- Consumo de la API REST.
+- Manejo de estados y feedback visual.
+- Desarrollo de Dashboard.
+- Vistas de candidatos, solicitudes y evaluaciones.
+- Pruebas de interfaz y usabilidad.
+
+### David - Backend, Base de Datos y lógica
+
+Responsabilidades principales:
+
+- Desarrollo del servidor Node.js / Express.
+- Diseño del modelo de datos.
+- Implementación de PostgreSQL.
+- Desarrollo de endpoints REST.
+- Validaciones del servidor.
+- Persistencia de candidatos, solicitudes y evaluaciones.
+- Sistema de autenticación.
+- Manejo de usuarios y roles.
+- Seguridad básica de la aplicación.
+- Pruebas de endpoints.
+- Integración Backend - Base de Datos.
+- Apoyo en despliegue.
+
+### Trabajo conjunto
+
+- Levantamiento y revisión de requerimientos.
+- Integración Frontend / Backend.
+- Testing.
+- Documentación.
+- GitHub.
+- Preparación de presentación y entrega.
+
+---
+
+## Estado actual
+
+### Implementado
+
+- [x] Proyecto React con Vite
+- [x] Bootstrap
+- [x] React Router
+- [x] Página pública
+- [x] Formulario de postulación
+- [x] Validaciones básicas
+- [x] Dashboard
+- [x] Estructura inicial de Backend
+- [x] Login inicial
+- [x] Rutas protegidas
+- [x] Datos simulados
+- [x] Pruebas unitarias frontend iniciales
+
+### En desarrollo
+
+- [ ] Base de datos PostgreSQL
+- [ ] Persistencia real
+- [ ] CRUD completo de candidatos
+- [ ] CRUD de solicitudes
+- [ ] Gestión persistente de evaluaciones
+- [ ] Autenticación conectada al Backend
+- [ ] Roles de usuario
+- [ ] Integración completa Frontend / API
+- [ ] Manejo de errores
+- [ ] Despliegue
+
+### Futuras mejoras
+
+- [ ] Chatbot de ayuda
+- [ ] Integración opcional con IA
+- [ ] Reportes
+- [ ] Métricas avanzadas
+
+---
+
+## Ejecución del proyecto
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
