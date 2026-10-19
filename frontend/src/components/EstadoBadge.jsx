@@ -1,21 +1,22 @@
-export function EstadoBadge({ estado }) {
-  const getBadgeClass = (est) => {
-    switch (est?.toLowerCase()) {
-      case 'aprobado':
-        return 'bg-success'
-      case 'rechazado':
-        return 'bg-danger'
-      case 'pendiente':
-      default:
-        return 'bg-warning text-dark'
-    }
+const CLASES_ESTADO = {
+  Pendiente: 'estado-pendiente',
+  'En Proceso': 'estado-proceso',
+  Aprobado: 'estado-aprobado',
+  Rechazado: 'estado-rechazado',
+};
+
+const CLASES_IDONEIDAD = {
+  Idóneo: 'estado-aprobado',
+  'Idóneo con observaciones': 'estado-proceso',
+  'No idóneo': 'estado-rechazado',
+};
+
+export default function EstadoBadge({ estado, idoneidad }) {
+  if (idoneidad) {
+    const clase = CLASES_IDONEIDAD[idoneidad] ?? 'estado-proceso';
+    return <span className={`estado-badge ${clase}`}>{idoneidad}</span>;
   }
 
-  return (
-    <span className={`badge ${getBadgeClass(estado)}`}>
-      {estado || 'Pendiente'}
-    </span>
-  )
+  const clase = CLASES_ESTADO[estado] ?? CLASES_ESTADO.Pendiente;
+  return <span className={`estado-badge ${clase}`}>{estado ?? 'Pendiente'}</span>;
 }
-
-export default EstadoBadge

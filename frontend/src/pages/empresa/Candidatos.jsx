@@ -12,24 +12,17 @@ export default function Candidatos() {
   const [nuevoCand, setNuevoCand] = useState({ nombre: '', rut: '', email: '', telefono: '', cargo: '' })
   const [mostrarModal, setMostrarModal] = useState(false)
 
-  // Obtener Token de sesión de localStorage
-  const token = localStorage.getItem('token')
-
   useEffect(() => {
-    fetch('http://localhost:5000/api/candidatos', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+    fetch('http://localhost:5000/api/candidatos')
       .then(res => res.json())
       .then(data => setCandidatos(data && data.length > 0 ? data : candidatosIniciales))
       .catch(() => setCandidatos(candidatosIniciales))
-  }, [token])
+  }, [])
 
   const candidatosFiltrados = candidatos.filter(c =>
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     c.rut.includes(busqueda) ||
-    (c.cargo && c.cargo.toLowerCase().includes(busqueda.toLowerCase()))
+    c.cargo.toLowerCase().includes(busqueda.toLowerCase())
   )
 
   const handleGuardar = (e) => {
@@ -40,10 +33,7 @@ export default function Candidatos() {
     
     fetch('http://localhost:5000/api/candidatos', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(creado)
     })
     .catch(() => null)
@@ -55,13 +45,7 @@ export default function Candidatos() {
 
   const handleEliminar = (id) => {
     if (confirm('¿Desea eliminar este candidato del registro?')) {
-      fetch(`http://localhost:5000/api/candidatos/${id}`, { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }).catch(() => null)
-
+      fetch(`http://localhost:5000/api/candidatos/${id}`, { method: 'DELETE' }).catch(() => null)
       setCandidatos(candidatos.filter(c => c.id !== id))
     }
   }
@@ -110,14 +94,13 @@ export default function Candidatos() {
                 <th className="py-3">Correo Electrónico</th>
                 <th className="py-3">Teléfono</th>
                 <th className="py-3">Cargo Postulado</th>
-                <th className="py-3">Documento (CV)</th>
                 <th className="py-3 text-end px-4">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {candidatosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-5 text-muted">
+                  <td colSpan="6" className="text-center py-5 text-muted">
                     No se encontraron candidatos registrados.
                   </td>
                 </tr>
@@ -128,25 +111,7 @@ export default function Candidatos() {
                     <td className="fw-bold text-dark">{c.nombre}</td>
                     <td>{c.email || '—'}</td>
                     <td>{c.telefono || '—'}</td>
-                    <td>
-                      <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
-                        {c.cargo}
-                      </span>
-                    </td>
-                    <td>
-                      {c.cvPath ? (
-                        <a
-                          href={`http://localhost:5000/uploads/${c.cvPath}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-sm btn-outline-primary"
-                        >
-                          📄 Ver CV
-                        </a>
-                      ) : (
-                        <span className="text-muted small">Sin adjunto</span>
-                      )}
-                    </td>
+                    <td><span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">{c.cargo}</span></td>
                     <td className="text-end px-4">
                       <button className="btn btn-sm btn-outline-danger" onClick={() => handleEliminar(c.id)}>
                         Eliminar
@@ -160,7 +125,7 @@ export default function Candidatos() {
         </div>
       </div>
 
-      {/* Modal de Creación */}
+      {/* Modal / Formulario Inline para Modal de Creación */}
       {mostrarModal && (
         <div className="modal d-block bg-dark bg-opacity-50" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered">

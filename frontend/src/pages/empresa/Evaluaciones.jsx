@@ -61,9 +61,6 @@ export default function Evaluaciones() {
   const [evaluacionSeleccionada, setEvaluacionSeleccionada] = useState(null)
   const [mostrarModal, setMostrarModal] = useState(false)
 
-  // Obtener Token de sesión de localStorage
-  const token = localStorage.getItem('token')
-
   // Formulario para agendar/crear evaluación y entrevista
   const [nuevoForm, setNuevoForm] = useState({
     candidato: '',
@@ -77,15 +74,11 @@ export default function Evaluaciones() {
   })
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/evaluaciones', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+    fetch('http://localhost:5000/api/evaluaciones')
       .then(res => res.json())
       .then(data => setEvaluaciones(data && data.length > 0 ? data : evaluacionesIniciales))
       .catch(() => setEvaluaciones(evaluacionesIniciales))
-  }, [token])
+  }, [])
 
   const evaluacionesFiltradas = evaluaciones.filter(e => {
     if (!filtroEstado) return true
@@ -123,10 +116,7 @@ export default function Evaluaciones() {
 
     fetch('http://localhost:5000/api/evaluaciones', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nueva)
     }).catch(() => null)
 

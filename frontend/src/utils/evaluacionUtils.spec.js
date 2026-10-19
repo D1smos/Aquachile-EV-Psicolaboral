@@ -1,84 +1,69 @@
-import { calcularMetricas, obtenerClaseBadge, filtrarEvaluacionesPorEstado } from './evaluacionUtils.js'
+import {
+  calcularMetricas,
+  clasificarIdoneidad,
+  estaEvaluado,
+  filtrarCandidatos,
+  ordenarCandidatos,
+} from './evaluacionUtils.js';
 
-describe('Pruebas Unitarias del Sistema (EP2)', () => {
-  // Prueba 1
-  it('1. Debe calcular correctamente el total de candidatos registrados', () => {
-    const candidatosMock = [{ id: 1 }, { id: 2 }, { id: 3 }]
-    const metricas = calcularMetricas([], candidatosMock)
-    expect(metricas.totalCandidatos).toBe(3)
-  })
+const evaluado = {
+  nombre: 'Ana Evaluada',
+  rut: '12.345.678-5',
+  correo: 'ana@correo.cl',
+  folio: 'AQ-2026-0001',
+  puntaje: 94.9,
+  respuestas: { p1: 5 },
+  estado: 'Aprobado',
+  fechaPostulacion: new Date().toISOString(),
+  familiaCargo: 'Técnico B/C',
+  cargo: 'Monitor Producción',
+  disponibilidad: 'Inmediata',
+};
+const pendiente = {
+  nombre: 'Pedro Pendiente',
+  rut: '11.111.111-1',
+  correo: 'pedro@correo.cl',
+  folio: 'AQ-2026-0002',
+  puntaje: null,
+  respuestas: null,
+  estado: 'Pendiente',
+  fechaPostulacion: new Date().toISOString(),
+  familiaCargo: 'Técnico B/C',
+  cargo: 'Monitor Producción',
+  disponibilidad: 'Inmediata',
+};
 
-  // Prueba 2
-  it('2. Debe contar correctamente las evaluaciones en estado "En Proceso"', () => {
-    const evaluacionesMock = [
-      { id: 1, estado: 'En Proceso' },
-      { id: 2, estado: 'Completada' },
-      { id: 3, estado: 'En Proceso' }
-    ]
-    const metricas = calcularMetricas(evaluacionesMock, [])
-    expect(metricas.enProceso).toBe(2)
-  })
+describe('utilidades de evaluación', () => {
+  it('detecta candidatos evaluados', () => {
+    expect(estaEvaluado(evaluado)).toBeTrue();
+    expect(estaEvaluado(pendiente)).toBeFalse();
+  });
 
-  // Prueba 3
-  it('3. Debe contar correctamente las evaluaciones en estado "Completada"', () => {
-    const evaluacionesMock = [
-      { id: 1, estado: 'Completada' },
-      { id: 2, estado: 'Completada' }
-    ]
-    const metricas = calcularMetricas(evaluacionesMock, [])
-    expect(metricas.completadas).toBe(2)
-  })
+  it('calcula métricas del dashboard', () => {
+    const metricas = calcularMetricas([evaluado, pendiente]);
+    expect(metricas.totalCandidatos).toBe(2);
+    expect(metricas.evaluacionesCompletadas).toBe(1);
+    expect(metricas.porEstado.Aprobado).toBe(1);
+    expect(metricas.porEstado.Pendiente).toBe(1);
+  });
 
-  // Prueba 4
-  it('4. Debe retornar "bg-success" para el estado "Completada"', () => {
-    const clase = obtenerClaseBadge('Completada')
-    expect(clase).toBe('bg-success')
-  })
+  it('filtra por estado y texto', () => {
+    const lista = [evaluado, pendiente];
+    expect(filtrarCandidatos(lista, { estado: 'Aprobado' }).length).toBe(1);
+    expect(filtrarCandidatos(lista, { estado: '', busqueda: 'pedro' }).length).toBe(1);
+    expect(filtrarCandidatos(lista, { estado: '', busqueda: 'zzz' }).length).toBe(0);
+  });
 
-  // Prueba 5
-  it('5. Debe retornar "bg-warning" para el estado "En Proceso"', () => {
-    const clase = obtenerClaseBadge('En Proceso')
-    expect(clase).toBe('bg-warning')
-  })
+  it('clasifica la idoneidad por puntaje y dimensiones críticas', () => {
+    expect(clasificarIdoneidad(90, [])).toBe('Idóneo');
+    expect(clasificarIdoneidad(50, [])).toBe('No idóneo');
+    expect(clasificarIdoneidad(80, [{ puntaje: 30 }])).toBe('Idóneo con observaciones');
+  });
 
-  // Prueba 6
-  it('6. Debe retornar "bg-danger" para el resultado "No Recomendado"', () => {
-    const clase = obtenerClaseBadge('No Recomendado')
-    expect(clase).toBe('bg-danger')
-  })
-
-  // Prueba 7
-  it('7. Debe retornar "bg-secondary" si el estado no está reconocido', () => {
-    const clase = obtenerClaseBadge('Desconocido')
-    expect(clase).toBe('bg-secondary')
-  })
-
-  // Prueba 8
-  it('8. Debe filtrar las evaluaciones correctamente según el estado seleccionado', () => {
-    const evaluacionesMock = [
-      { id: 1, estado: 'En Proceso' },
-      { id: 2, estado: 'Completada' }
-    ]
-    const filtradas = filtrarEvaluacionesPorEstado(evaluacionesMock, 'Completada')
-    expect(filtradas.length).toBe(1)
-    expect(filtradas[0].id).toBe(2)
-  })
-
-  // Prueba 9
-  it('9. Debe devolver todas las evaluaciones si el filtro de estado está vacío', () => {
-    const evaluacionesMock = [
-      { id: 1, estado: 'En Proceso' },
-      { id: 2, estado: 'Completada' }
-    ]
-    const filtradas = filtrarEvaluacionesPorEstado(evaluacionesMock, '')
-    expect(filtradas.length).toBe(2)
-  })
-
-  // Prueba 10
-  it('10. Debe manejar entradas nulas o vacías en el cálculo de métricas sin lanzar errores', () => {
-    const metricas = calcularMetricas(null, null)
-    expect(metricas.totalCandidatos).toBe(0)
-    expect(metricas.enProceso).toBe(0)
-    expect(metricas.completadas).toBe(0)
-  })
-})
+  it('ordena por fecha de postulación descendente', () => {
+    const viejo = { ...pendiente, folio: 'AQ-1', fechaPostulacion: '2026-01-01T00:00:00.000Z' };
+    const nuevo = { ...evaluado, folio: 'AQ-2', fechaPostulacion: '2026-06-01T00:00:00.000Z' };
+    const ordenados = ordenarCandidatos([viejo, nuevo]);
+    expect(ordenados[0].folio).toBe('AQ-2');
+  });
+});
