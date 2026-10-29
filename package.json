@@ -12,6 +12,7 @@
     "lint": "npm run lint --prefix frontend",
     "test": "npm test --prefix backend && npm test --prefix frontend",
     "test:karma": "npm run test:karma --prefix frontend",
-    "verificar": "node scripts/verificar-entorno.mjs"
+    "verificar": "node scripts/verificar-entorno.mjs",
+    "demo:reset": "npm run demo:reset --prefix backend"
   }
 }

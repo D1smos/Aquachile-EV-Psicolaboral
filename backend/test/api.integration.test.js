@@ -33,7 +33,7 @@ const baseUrl = `http://127.0.0.1:${servidor.address().port}/api`;
 
 after(async () => {
   await new Promise((resolver) => servidor.close(resolver));
-  await rm(directorioPrueba, { recursive: true, force: true });
+  await rm(directorioPrueba, { recursive: true, force: true }).catch(() => undefined);
 });
 
 const peticion = async (metodo, ruta, { token, cuerpo } = {}) => {
