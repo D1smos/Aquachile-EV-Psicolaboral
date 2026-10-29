@@ -4,6 +4,19 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { validarCredenciales } from '../../utils/validaciones.js';
 
+const CUENTAS_DEMO = [
+  {
+    rol: 'Evaluador',
+    email: 'evaluador@aquachile.cl',
+    password: 'AquaChile2026!',
+  },
+  {
+    rol: 'Analista',
+    email: 'analista@aquachile.cl',
+    password: 'AquaChile2026!',
+  },
+];
+
 export default function Login() {
   const { iniciarSesion, autenticado } = useAuth();
   const { mostrarToast } = useToast();
@@ -21,6 +34,13 @@ export default function Login() {
     const { name, value } = evento.target;
     setCredenciales((previo) => ({ ...previo, [name]: value }));
     setErrores((previo) => ({ ...previo, [name]: undefined }));
+  };
+
+  const usarCuenta = (cuenta) => {
+    setCredenciales({ email: cuenta.email, password: cuenta.password });
+    setErrores({});
+    setErrorServidor(null);
+    mostrarToast(`Cuenta de ${cuenta.rol.toLowerCase()} cargada`, 'info');
   };
 
   const enviar = async (evento) => {
@@ -80,7 +100,8 @@ export default function Login() {
       <section className="login-formulario">
         <form className="tarjeta-login" onSubmit={enviar} noValidate>
           <span className="login-eyebrow">Inicio de sesión</span>
-          <h2>Ingresa como evaluador</h2>
+          <h2>Ingresa a tu panel</h2>
+          <p className="login-ayuda">Evaluadores y analistas de reclutamiento.</p>
 
           {errorServidor && (
             <div className="alerta alerta-error" role="alert">
@@ -100,7 +121,7 @@ export default function Login() {
                 type="email"
                 className="control-campo"
                 autoComplete="username"
-                placeholder="evaluador@aquachile.cl"
+                placeholder="nombre@aquachile.cl"
                 value={credenciales.email}
                 onChange={modificar}
                 aria-invalid={Boolean(errores.email)}
@@ -144,13 +165,41 @@ export default function Login() {
                 <span className="spinner-border spinner-border-sm" aria-hidden="true" /> Verificando…
               </>
             ) : (
-              'Ingresar al panel'
+              'Iniciar sesión'
             )}
           </button>
 
           <Link className="enlace-volver" to="/postulacion">
             <i className="bi bi-arrow-left" aria-hidden="true" /> Volver a la postulación
           </Link>
+
+          <div className="login-demo" role="group" aria-labelledby="login-demo-titulo">
+            <div className="login-demo-cabecera">
+              <span className="login-demo-titulo" id="login-demo-titulo">
+                Cuentas de demostración
+              </span>
+              <span className="login-demo-nota">Selecciona una para completar el acceso</span>
+            </div>
+            <ul className="login-demo-lista">
+              {CUENTAS_DEMO.map((cuenta) => (
+                <li key={cuenta.email} className="login-demo-cuenta">
+                  <div className="login-demo-datos">
+                    <span className="login-demo-rol">{cuenta.rol}</span>
+                    <span className="login-demo-credenciales">{cuenta.email}</span>
+                    <span className="login-demo-credenciales">Contraseña: {cuenta.password}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="login-demo-usar"
+                    onClick={() => usarCuenta(cuenta)}
+                    aria-label={`Usar cuenta de ${cuenta.rol.toLowerCase()}`}
+                  >
+                    Usar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </form>
       </section>
     </div>

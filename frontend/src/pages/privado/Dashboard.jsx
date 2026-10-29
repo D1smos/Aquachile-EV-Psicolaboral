@@ -120,7 +120,16 @@ export default function Dashboard() {
         previos.map((candidato) => (candidato.id === id ? datos.candidato : candidato)),
       );
       setSeleccion((previo) => (previo?.id === id ? datos.candidato : previo));
-      mostrarToast(datos.mensaje, 'exito');
+      if (datos.correo?.enviado) {
+        mostrarToast(`${datos.mensaje} · correo de aceptación enviado`, 'exito');
+      } else if (datos.correo) {
+        mostrarToast(
+          `${datos.mensaje}. No se pudo enviar el correo: ${datos.correo.motivo}`,
+          'advertencia',
+        );
+      } else {
+        mostrarToast(datos.mensaje, 'exito');
+      }
     } catch (capturado) {
       mostrarToast(capturado.message, 'error');
     }
@@ -185,7 +194,17 @@ export default function Dashboard() {
         previos.map((candidato) => (candidato.id === id ? datos.candidato : candidato)),
       );
       setSeleccion(null);
-      mostrarToast(`Evaluación guardada · ${datos.candidato.idoneidad}`, 'exito');
+      const mensaje = `Evaluación guardada · ${datos.candidato.idoneidad}`;
+      if (datos.correo?.enviado) {
+        mostrarToast(`${mensaje} · correo de aceptación enviado`, 'exito');
+      } else if (datos.correo) {
+        mostrarToast(
+          `${mensaje}. No se pudo enviar el correo: ${datos.correo.motivo}`,
+          'advertencia',
+        );
+      } else {
+        mostrarToast(mensaje, 'exito');
+      }
     } catch (capturado) {
       mostrarToast(capturado.message, 'error');
     } finally {
@@ -195,7 +214,7 @@ export default function Dashboard() {
 
   return (
     <div className="pagina-dashboard">
-      <header className="cabecera-dashboard">
+      <header className="cabecera-dashboard" id="resumen">
         <div>
           <h1>Dashboard</h1>
           <p>Panel de gestión, métricas y seguimiento de evaluaciones psicolaborales.</p>
@@ -206,9 +225,11 @@ export default function Dashboard() {
           )}
         </div>
         <div className="cabecera-dashboard-acciones">
-          <button type="button" className="boton boton-primario" onClick={() => setMostrarNuevo(true)}>
-            <i className="bi bi-person-plus-fill" aria-hidden="true" /> Nuevo candidato
-          </button>
+          {puedeEvaluar && (
+            <button type="button" className="boton boton-primario" onClick={() => setMostrarNuevo(true)}>
+              <i className="bi bi-person-plus-fill" aria-hidden="true" /> Nuevo candidato
+            </button>
+          )}
           <button type="button" className="boton boton-secundario" onClick={descargarCsv}>
             <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" /> Exportar CSV
           </button>
@@ -224,7 +245,7 @@ export default function Dashboard() {
 
       {!cargando && !error && (
         <>
-          <section className="rejilla-kpi" aria-label="Métricas del proceso">
+          <section className="rejilla-kpi" id="metricas" aria-label="Métricas del proceso">
             <TarjetaMetrica
               titulo="Total candidatos"
               valor={metricas.totalCandidatos}
@@ -264,7 +285,7 @@ export default function Dashboard() {
             onLimpiar={limpiarFiltros}
           />
 
-          <section className="panel-tabla">
+          <section className="panel-tabla" id="candidatos">
             <div className="panel-tabla-cabecera">
               <h2>Candidatos registrados</h2>
               <span>Ordenados por fecha de postulación</span>

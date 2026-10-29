@@ -20,6 +20,7 @@ import { estadoPorIdoneidad, evaluarRespuestas } from '../services/evaluacion.se
 import { generarAsistencia, compararPorCargo } from '../services/asistente.service.js';
 import { generarCsv, generarInformePdf, filtrarParaExportar } from '../services/exportacion.service.js';
 import { validarEstado, validarEvaluacion } from '../validators/evaluacion.validator.js';
+import { enviarCorreoAprobacion, requiereAvisoAprobacion } from '../services/correo.service.js';
 
 const lanzarErrores = (errores, mensaje) => {
   if (errores.length > 0) {
@@ -30,6 +31,13 @@ const lanzarErrores = (errores, mensaje) => {
 const cabeceraContenido = (nombreOriginal) => {
   const ascii = nombreOriginal.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
   return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombreOriginal)}`;
+};
+
+const notificarAprobacion = async (anterior, actual) => {
+  if (!requiereAvisoAprobacion(anterior, actual)) {
+    return null;
+  }
+  return enviarCorreoAprobacion(actual);
 };
 
 export const listar = envolver(async (req, res) => {
@@ -74,13 +82,15 @@ export const actualizarEstado = envolver(async (req, res) => {
   const errores = validarEstado(req.body?.estado);
   lanzarErrores(errores, 'Estado de proceso no válido');
 
+  const anterior = await obtenerCandidato(req.params.id);
   const candidato = await cambiarEstado(
     req.params.id,
     req.body.estado,
     req.usuario.email,
     String(req.body.motivo ?? '').trim() || 'Cambio de estado manual',
   );
-  res.json({ ok: true, mensaje: `Estado actualizado a "${candidato.estado}"`, candidato });
+  const correo = await notificarAprobacion(anterior, candidato);
+  res.json({ ok: true, mensaje: `Estado actualizado a "${candidato.estado}"`, candidato, correo });
 });
 
 export const evaluar = envolver(async (req, res) => {
@@ -99,10 +109,12 @@ export const evaluar = envolver(async (req, res) => {
     estado,
   });
 
+  const correo = await notificarAprobacion(candidato, actualizado);
   res.json({
     ok: true,
     mensaje: 'Evaluación registrada correctamente',
     candidato: actualizado,
+    correo,
   });
 });
 

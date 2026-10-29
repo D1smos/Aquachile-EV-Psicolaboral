@@ -48,6 +48,7 @@ test('la postulación exige campos completos y válidos', () => {
     formacion: 'Técnico',
     disponibilidad: 'Inmediata',
     motivacion: 'Me interesa el cargo',
+    aceptaPrivacidad: true,
   });
   assert.deepEqual(errores, []);
 
@@ -63,4 +64,20 @@ test('la postulación exige campos completos y válidos', () => {
     disponibilidad: 'Inmediata',
   });
   assert.equal(conCargoInvalido.some((error) => error.campo === 'cargo'), true);
+
+  const sinConsentimiento = validarPostulacion({
+    nombre: 'María José González',
+    rut: '12.345.678-5',
+    correo: 'maria@correo.cl',
+    telefono: '912345678',
+    familiaCargo: 'Técnico B/C',
+    cargo: 'Monitor Producción',
+    aniosExperiencia: 3,
+    formacion: 'Técnico',
+    disponibilidad: 'Inmediata',
+  });
+  assert.equal(
+    sinConsentimiento.some((error) => error.campo === 'aceptaPrivacidad'),
+    true,
+  );
 });

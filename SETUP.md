@@ -53,8 +53,16 @@ Editar `backend/.env` y completar:
 | `ANALISTA_PASSWORD` | Sí | Contraseña de la cuenta analista |
 | `DATABASE_URL` | No | Vacía = SQLite local. Con URL = PostgreSQL/Supabase |
 | `SEED_DEMO` | No | `true` carga 10 candidatos de ejemplo en una base vacía |
+| `SMTP_HOST` | No | Servidor SMTP para el correo automático de aprobación |
+| `SMTP_PORT` | No | Puerto SMTP (587 por defecto) |
+| `SMTP_SECURE` | No | `true` para conexión TLS directa (puerto 465) |
+| `SMTP_USER` / `SMTP_PASS` | No | Credenciales SMTP, si el proveedor las exige |
+| `SMTP_FROM` | No | Remitente visible, por ejemplo `Reclutamiento AquaChile <reclutamiento@aquachile.cl>` |
+| `SMTP_REPLY_TO` | No | Dirección de respuesta opcional |
 
 Si `EVALUADOR_PASSWORD` o `ANALISTA_PASSWORD` quedan vacías, las cuentas no se crean y el login responde 401.
+
+El correo de aceptación se envía solo cuando un candidato pasa a **Aprobado** (cambio manual o al guardar la evaluación). Si `SMTP_HOST` queda vacío, el cambio de estado se guarda igual y la interfaz avisa que el correo no se envió.
 
 Generar el secreto JWT:
 

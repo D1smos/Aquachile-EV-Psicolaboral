@@ -123,6 +123,10 @@ export const validarPostulacion = (formulario = {}, archivos = {}) => {
     agregar('motivacion', 'La motivación no puede superar los 500 caracteres');
   }
 
+  if (!formulario.aceptaPrivacidad) {
+    agregar('aceptaPrivacidad', 'Debes aceptar la política de privacidad para postular');
+  }
+
   if (!archivos.cv) {
     agregar('cv', 'Adjunta tu CV en formato PDF, DOC o DOCX');
   } else if (!archivoCvValido(archivos.cv)) {

@@ -228,6 +228,14 @@ export default function ModalEvaluacion({
               <EstadoBadge estado={formulario.estado} />
             </div>
 
+            <p className="nota-aprobacion">
+              <i className="bi bi-envelope-check" aria-hidden="true" />
+              <span>
+                Si el estado cambia a <strong>Aprobado</strong>, se enviará un correo automático a{' '}
+                {candidato.correo}.
+              </span>
+            </p>
+
             <div className="archivos-fila">
               <span className="etiqueta-campo">Documentos adjuntos</span>
               {archivos.length === 0 ? (
@@ -253,7 +261,7 @@ export default function ModalEvaluacion({
 
           <section className="modal-seccion">
             <div className="seccion-cabecera">
-              <h4 className="seccion-titulo">Asistente IA</h4>
+              <h4 className="seccion-titulo">Apoyo automático</h4>
               <button
                 type="button"
                 className="boton boton-secundario boton-sm"
@@ -272,7 +280,7 @@ export default function ModalEvaluacion({
               </button>
             </div>
             <small className="ayuda-campo">
-              Apoyo automático a partir del perfil y el CV. No reemplaza la evaluación profesional.
+              Analiza el perfil y el CV con reglas de coincidencia. No reemplaza la evaluación profesional.
             </small>
             {asistencia && (
               <div className="asistencia-resultado">

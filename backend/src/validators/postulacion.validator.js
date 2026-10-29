@@ -51,5 +51,13 @@ export const validarPostulacion = (cuerpo = {}) => {
     agregar('motivacion', 'La motivación no puede superar los 500 caracteres');
   }
 
+  const aceptaPrivacidad =
+    cuerpo.aceptaPrivacidad === true ||
+    cuerpo.aceptaPrivacidad === 'true' ||
+    cuerpo.aceptaPrivacidad === 'on';
+  if (!aceptaPrivacidad) {
+    agregar('aceptaPrivacidad', 'Debes aceptar la política de privacidad para postular');
+  }
+
   return errores;
 };

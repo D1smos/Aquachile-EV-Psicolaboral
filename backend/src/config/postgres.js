@@ -15,6 +15,8 @@ const COLUMNAS_CANDIDATO = [
   'aniosExperiencia',
   'disponibilidad',
   'motivacion',
+  'consentimiento',
+  'fechaConsentimiento',
   'estado',
   'respuestas',
   'puntaje',
@@ -53,6 +55,8 @@ const ESQUEMA = `
     aniosExperiencia INTEGER NOT NULL,
     disponibilidad TEXT NOT NULL,
     motivacion TEXT NOT NULL DEFAULT '',
+    consentimiento BOOLEAN NOT NULL DEFAULT false,
+    fechaConsentimiento TEXT,
     estado TEXT NOT NULL,
     respuestas JSONB,
     puntaje REAL,
@@ -129,6 +133,12 @@ const obtenerPool = () => {
 const asegurarEsquema = async () => {
   if (!esquemaListo) {
     await obtenerPool().query(ESQUEMA);
+    await obtenerPool().query(
+      'ALTER TABLE candidatos ADD COLUMN IF NOT EXISTS consentimiento BOOLEAN NOT NULL DEFAULT false',
+    );
+    await obtenerPool().query(
+      'ALTER TABLE candidatos ADD COLUMN IF NOT EXISTS fechaConsentimiento TEXT',
+    );
     esquemaListo = true;
   }
 };
@@ -147,6 +157,7 @@ const aCandidato = (fila, archivos = []) => ({
   afinidadIA: fila.afinidadIA === null ? null : Number(fila.afinidadIA),
   respuestas: aJson(fila.respuestas, null),
   dimensiones: aJson(fila.dimensiones, []),
+  consentimiento: Boolean(fila.consentimiento),
   archivos: archivos.map((archivo) => ({ ...archivo, tamano: Number(archivo.tamano) })),
 });
 
@@ -241,6 +252,17 @@ export const dbCandidatos = {
   obtenerPorId: async (id) => {
     await asegurarEsquema();
     const resultado = await obtenerPool().query('SELECT * FROM candidatos WHERE id = $1', [String(id)]);
+    if (resultado.rows.length === 0) {
+      return null;
+    }
+    const archivos = await dbArchivos.listarPorCandidato(resultado.rows[0].id);
+    return aCandidato(normalizarFila(resultado.rows[0]), archivos);
+  },
+  buscarPorFolio: async (folio) => {
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query('SELECT * FROM candidatos WHERE folio = $1', [
+      String(folio ?? '').trim().toUpperCase(),
+    ]);
     if (resultado.rows.length === 0) {
       return null;
     }

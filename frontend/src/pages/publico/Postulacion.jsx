@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
@@ -20,6 +21,7 @@ const FORM_INICIAL = {
   disponibilidad: '',
   aniosExperiencia: '',
   motivacion: '',
+  aceptaPrivacidad: false,
 };
 
 const ARCHIVOS_MAXIMOS = 4;
@@ -78,6 +80,10 @@ export default function Postulacion() {
     }
     if (name === 'familiaCargo') {
       setFormulario((previo) => ({ ...previo, familiaCargo: value, cargo: '' }));
+      return;
+    }
+    if (name === 'aceptaPrivacidad') {
+      setFormulario((previo) => ({ ...previo, aceptaPrivacidad: evento.target.checked }));
       return;
     }
     setFormulario((previo) => ({ ...previo, [name]: value }));
@@ -162,9 +168,14 @@ export default function Postulacion() {
             <strong>{enviado.cargo}</strong> quedó en estado <em>{enviado.estado}</em>. El equipo
             de selección revisará tu antecedente y te contactará por correo.
           </p>
-          <button type="button" className="boton boton-primario" onClick={limpiar}>
-            Registrar otra postulación
-          </button>
+          <div className="confirmacion-acciones">
+            <Link to="/consulta" className="boton boton-primario">
+              Consultar mi estado
+            </Link>
+            <button type="button" className="boton boton-secundario" onClick={limpiar}>
+              Registrar otra postulación
+            </button>
+          </div>
         </div>
       </section>
     );
@@ -457,6 +468,31 @@ export default function Postulacion() {
               </Campo>
             </div>
           </fieldset>
+
+          <div className={`campo-consentimiento ${errores.aceptaPrivacidad ? 'campo-con-error' : ''}`}>
+            <input
+              id="aceptaPrivacidad"
+              name="aceptaPrivacidad"
+              type="checkbox"
+              checked={formulario.aceptaPrivacidad}
+              onChange={modificar}
+              aria-invalid={Boolean(errores.aceptaPrivacidad)}
+              aria-describedby={errores.aceptaPrivacidad ? 'aceptaPrivacidad-error' : undefined}
+            />
+            <label htmlFor="aceptaPrivacidad">
+              He leído y acepto la{' '}
+              <Link to="/privacidad" target="_blank" rel="noreferrer">
+                política de privacidad
+              </Link>{' '}
+              y el tratamiento de mis datos para este proceso de selección.
+            </label>
+            {errores.aceptaPrivacidad && (
+              <small className="error-campo" id="aceptaPrivacidad-error">
+                <i className="bi bi-exclamation-circle" aria-hidden="true" />{' '}
+                {errores.aceptaPrivacidad}
+              </small>
+            )}
+          </div>
 
           <div className="pie-formulario">
             <p className="nota-privacidad">

@@ -1,11 +1,12 @@
 export default function configurar(config) {
   config.set({
-    frameworks: ['jasmine'],
+    frameworks: ['vite', 'jasmine'],
+    plugins: ['karma-vite', 'karma-jasmine', 'karma-chrome-launcher'],
     files: [
-      { pattern: 'src/utils/validaciones.spec.js', type: 'module' },
-      { pattern: 'src/utils/evaluacionUtils.spec.js', type: 'module' },
-      { pattern: 'src/utils/validaciones.js', included: false, type: 'module' },
-      { pattern: 'src/utils/evaluacionUtils.js', included: false, type: 'module' },
+      { pattern: 'src/utils/*.spec.js', type: 'module', watched: false, served: false },
+      { pattern: 'src/layouts/AppLayout.test.js', type: 'module', watched: false, served: false },
+      { pattern: 'src/components/**/*.test.js', type: 'module', watched: false, served: false },
+      { pattern: 'src/pages/**/*.test.js', type: 'module', watched: false, served: false },
     ],
     reporters: ['progress'],
     port: 9876,

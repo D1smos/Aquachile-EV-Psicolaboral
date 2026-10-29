@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', 'src/pages/empresa/**', 'src/data/**', 'src/pages/publico/Confirmacion.jsx', 'src/components/Navbar.jsx'] },
+  { ignores: ['dist'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -42,7 +42,7 @@ export default [
     },
   },
   {
-    files: ['**/*.spec.js'],
+    files: ['**/*.spec.js', '**/*.test.{js,jsx}'],
     languageOptions: {
       globals: globals.jasmine,
     },

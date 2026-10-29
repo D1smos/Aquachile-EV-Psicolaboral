@@ -19,6 +19,8 @@ const COLUMNAS_CANDIDATO = [
   'aniosExperiencia',
   'disponibilidad',
   'motivacion',
+  'consentimiento',
+  'fechaConsentimiento',
   'estado',
   'respuestas',
   'puntaje',
@@ -57,6 +59,8 @@ const ESQUEMA = `
     aniosExperiencia INTEGER NOT NULL,
     disponibilidad TEXT NOT NULL,
     motivacion TEXT NOT NULL DEFAULT '',
+    consentimiento INTEGER NOT NULL DEFAULT 0,
+    fechaConsentimiento TEXT,
     estado TEXT NOT NULL,
     respuestas TEXT,
     puntaje REAL,
@@ -106,6 +110,13 @@ const obtenerBd = () => {
     instancia = new DatabaseSync(rutaBd());
     instancia.exec('PRAGMA foreign_keys = ON;');
     instancia.exec(ESQUEMA);
+    const columnas = instancia.prepare('PRAGMA table_info(candidatos)').all().map((fila) => fila.name);
+    if (!columnas.includes('consentimiento')) {
+      instancia.exec('ALTER TABLE candidatos ADD COLUMN consentimiento INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!columnas.includes('fechaConsentimiento')) {
+      instancia.exec('ALTER TABLE candidatos ADD COLUMN fechaConsentimiento TEXT');
+    }
   }
   return instancia;
 };
@@ -125,6 +136,7 @@ const aCandidato = (fila, archivos = []) => ({
   ...fila,
   respuestas: leerJson(fila.respuestas, null),
   dimensiones: leerJson(fila.dimensiones, []),
+  consentimiento: Boolean(fila.consentimiento),
   archivos: archivos.map((archivo) => ({ ...archivo })),
 });
 
@@ -201,6 +213,16 @@ export const dbCandidatos = {
   },
   obtenerPorId: async (id) => {
     const fila = obtenerBd().prepare('SELECT * FROM candidatos WHERE id = ?').get(String(id));
+    if (!fila) {
+      return null;
+    }
+    const archivos = await dbArchivos.listarPorCandidato(fila.id);
+    return aCandidato(fila, archivos);
+  },
+  buscarPorFolio: async (folio) => {
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM candidatos WHERE folio = ?')
+      .get(String(folio ?? '').trim().toUpperCase());
     if (!fila) {
       return null;
     }

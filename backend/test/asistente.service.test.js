@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { construirAsistencia, semaforoDe } from '../src/services/asistente.service.js';
+
+process.env.JWT_SECRET ||= 'secreto-de-prueba';
+const { construirAsistencia, semaforoDe } = await import('../src/services/asistente.service.js');
 
 const candidatoBase = {
   nombre: 'Ana Prueba',

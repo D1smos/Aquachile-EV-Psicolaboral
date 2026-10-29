@@ -128,7 +128,7 @@ export const generarInformePdf = (candidatoId) =>
             linea(doc, 'Observaciones', candidato.observaciones ?? '—');
             if (candidato.resumenIA) {
               doc.moveDown();
-              doc.fontSize(14).font('Helvetica-Bold').text('Asistencia IA');
+              doc.fontSize(14).font('Helvetica-Bold').text('Apoyo automático');
               doc.fontSize(11).font('Helvetica').text(candidato.resumenIA);
               linea(doc, 'Afinidad CV-cargo', `${candidato.afinidadIA ?? '—'}%`);
             }

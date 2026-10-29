@@ -48,11 +48,31 @@ test('la postulación exige todos los campos del formulario', () => {
       formacion: 'Técnico',
       disponibilidad: 'Inmediata',
       motivacion: 'Me interesa el cargo',
+      aceptaPrivacidad: true,
     },
     { cv: { name: 'cv.pdf', size: 2048 } },
   );
   assert.deepEqual(completo.errores, {});
   assert.equal(completo.valido, true);
+
+  const sinConsentimiento = validarPostulacion(
+    {
+      nombre: 'María José González',
+      rut: '12.345.678-5',
+      correo: 'maria@correo.cl',
+      telefono: '912345678',
+      familiaCargo: 'Técnico B/C',
+      cargo: 'Monitor Producción',
+      aniosExperiencia: 3,
+      formacion: 'Técnico',
+      disponibilidad: 'Inmediata',
+      motivacion: 'Me interesa el cargo',
+      aceptaPrivacidad: false,
+    },
+    { cv: { name: 'cv.pdf', size: 2048 } },
+  );
+  assert.equal(sinConsentimiento.valido, false);
+  assert.ok(sinConsentimiento.errores.aceptaPrivacidad);
 });
 
 test('valida las credenciales de acceso', () => {

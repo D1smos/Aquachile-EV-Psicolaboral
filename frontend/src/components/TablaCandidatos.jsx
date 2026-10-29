@@ -103,55 +103,69 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
                     <span className="sin-evaluacion">Sin evaluar</span>
                   )}
                 </td>
-                <td className="text-end">
-                  {puedeEvaluar && (
+                <td>
+                  <div className="acciones-tabla">
+                    {puedeEvaluar && (
+                      <button
+                        type="button"
+                        className="boton boton-primario boton-sm"
+                        onClick={() => onEvaluar(candidato)}
+                        title="Evaluar candidato"
+                      >
+                        <i className="bi bi-clipboard2-check" aria-hidden="true" />
+                        <span className="oculto-movil">Evaluar</span>
+                      </button>
+                    )}
+                    {puedeEvaluar && (
+                      <button
+                        type="button"
+                        className="boton boton-secundario boton-sm boton-accion"
+                        onClick={() => onEditar(candidato)}
+                        title="Editar ficha del candidato"
+                        aria-label="Editar ficha del candidato"
+                      >
+                        <i className="bi bi-pencil" aria-hidden="true" />
+                        <span className="accion-etiqueta">Editar</span>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="boton boton-primario boton-sm"
-                      onClick={() => onEvaluar(candidato)}
+                      className="boton boton-secundario boton-sm boton-accion"
+                      onClick={() => onHistorial(candidato)}
+                      title="Ver historial de etapas"
+                      aria-label="Ver historial de etapas"
                     >
-                      <i className="bi bi-clipboard2-check" aria-hidden="true" />
-                      <span className="oculto-movil"> Evaluar</span>
+                      <i className="bi bi-clock-history" aria-hidden="true" />
+                      <span className="accion-etiqueta">Historial</span>
                     </button>
-                  )}{' '}
-                  <button
-                    type="button"
-                    className="boton boton-secundario boton-sm"
-                    onClick={() => onEditar(candidato)}
-                    title="Editar ficha del candidato"
-                  >
-                    <i className="bi bi-pencil" aria-hidden="true" />
-                    <span className="oculto-movil"> Editar</span>
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="boton boton-secundario boton-sm"
-                    onClick={() => onHistorial(candidato)}
-                    title="Ver historial de etapas"
-                  >
-                    <i className="bi bi-clock-history" aria-hidden="true" />
-                    <span className="oculto-movil"> Historial</span>
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="boton boton-secundario boton-sm"
-                    onClick={() => onInforme(candidato)}
-                    title="Descargar ficha en PDF"
-                  >
-                    <i className="bi bi-file-earmark-pdf" aria-hidden="true" />
-                    <span className="oculto-movil"> PDF</span>
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className={`boton boton-sm ${confirmando === candidato.id ? 'boton-peligro' : 'boton-secundario'}`}
-                    onClick={() => pedirConfirmacion(candidato)}
-                    title="Eliminar candidato"
-                  >
-                    <i className="bi bi-trash" aria-hidden="true" />
-                    <span className="oculto-movil">
-                      {confirmando === candidato.id ? ' ¿Confirmar?' : ' Eliminar'}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      className="boton boton-secundario boton-sm boton-accion"
+                      onClick={() => onInforme(candidato)}
+                      title="Descargar ficha en PDF"
+                      aria-label="Descargar ficha en PDF"
+                    >
+                      <i className="bi bi-file-earmark-pdf" aria-hidden="true" />
+                      <span className="accion-etiqueta">PDF</span>
+                    </button>
+                    {puedeEvaluar && (
+                      <>
+                        <span className="acciones-divisor" aria-hidden="true" />
+                        <button
+                          type="button"
+                          className={`boton boton-peligro boton-sm boton-accion ${confirmando === candidato.id ? 'boton-confirmar' : ''}`}
+                          onClick={() => pedirConfirmacion(candidato)}
+                          title={confirmando === candidato.id ? 'Confirmar eliminación' : 'Eliminar candidato'}
+                          aria-label={confirmando === candidato.id ? 'Confirmar eliminación' : 'Eliminar candidato'}
+                        >
+                          <i className="bi bi-trash" aria-hidden="true" />
+                          <span className="accion-etiqueta">
+                            {confirmando === candidato.id ? 'Confirmar' : 'Eliminar'}
+                          </span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))

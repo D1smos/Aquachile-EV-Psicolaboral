@@ -41,8 +41,15 @@ describe('validaciones de postulación', () => {
       formacion: 'Técnico',
       disponibilidad: 'Inmediata',
       motivacion: '',
+      aceptaPrivacidad: true,
     };
     expect(validarPostulacion(formulario, { cv: { name: 'cv.pdf', size: 1000 } }).valido).toBeTrue();
+    expect(
+      validarPostulacion(
+        { ...formulario, aceptaPrivacidad: false },
+        { cv: { name: 'cv.pdf', size: 1000 } },
+      ).valido,
+    ).toBeFalse();
     expect(validarPostulacion({}, {}).valido).toBeFalse();
   });
 });
