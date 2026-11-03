@@ -159,10 +159,6 @@ La evidencia detallada de casos, resultados y cobertura está en [`docs/Evidenci
 * [`SETUP.md`](SETUP.md): instalación, entornos, base de datos y solución de problemas.
 * [`docs/ERS_EP2.md`](docs/ERS_EP2.md): especificación de requisitos de la EP2.
 * [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md): casos, resultados y cobertura.
-* [`docs/Guia_Defensa_EP2_AquaChile_v2.md`](docs/Guia_Defensa_EP2_AquaChile_v2.md): guía consolidada de estudio y defensa.
-* [`docs/Guia_Estudio_Frontend_Vicente_v2.md`](docs/Guia_Estudio_Frontend_Vicente_v2.md): guía específica de frontend.
-* [`docs/Verificacion_Rubrica_EP2_Defensa_v2.md`](docs/Verificacion_Rubrica_EP2_Defensa_v2.md): matriz de cumplimiento y brechas.
-* [`docs/Guia_General_Proyecto_AquaChile_v2.md`](docs/Guia_General_Proyecto_AquaChile_v2.md): contexto, arquitectura y flujo completo.
 
 ## Estado del Proyecto
 La EP2 entrega el frontend React integrado con backend, autenticación, persistencia dual y pruebas automatizadas. Quedan para la etapa final:
