@@ -49,6 +49,16 @@ describe('Consulta pública', () => {
     expect(montaje.contenedor.textContent).toContain('RUT válido');
   });
 
+  it('permite escribir el folio completo y el RUT con dígito verificador', () => {
+    montaje = montar();
+    const folio = montaje.contenedor.querySelector('#consulta-folio');
+    const rut = montaje.contenedor.querySelector('#consulta-rut');
+
+    expect(folio.maxLength).toBe(16);
+    expect(rut.maxLength).toBe(12);
+    expect(rut.inputMode).toBe('text');
+  });
+
   it('muestra el estado sin exponer datos personales sensibles', async () => {
     montaje = montar();
     const { contenedor } = montaje;

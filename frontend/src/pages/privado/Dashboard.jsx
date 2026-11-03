@@ -80,6 +80,33 @@ export default function Dashboard() {
     cargar();
   }, [cargar]);
 
+  const refrescar = useCallback(async () => {
+    try {
+      const datos = await api.get('/candidatos');
+      setCandidatos(datos.candidatos);
+    } catch (capturado) {
+      if (capturado.codigo === 401) {
+        setError(capturado.message);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') {
+        refrescar();
+      }
+    };
+    const intervalo = window.setInterval(refrescar, 30000);
+    window.addEventListener('focus', refrescar);
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      window.clearInterval(intervalo);
+      window.removeEventListener('focus', refrescar);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [refrescar]);
+
   useEffect(() => {
     setPagina(1);
   }, [filtros]);
@@ -220,7 +247,10 @@ export default function Dashboard() {
           <p>Panel de gestión, métricas y seguimiento de evaluaciones psicolaborales.</p>
           {usuario && (
             <p className="modal-subtitulo">
-              Conectado como {usuario.nombre} · {usuario.rol === 'psicologo' ? 'Evaluador' : 'Analista'}
+              Conectado como {usuario.nombre}
+              <span className="chip-rol">
+                {usuario.rol === 'psicologo' ? 'Evaluador' : 'Analista'}
+              </span>
             </p>
           )}
         </div>

@@ -5,6 +5,7 @@ import {
   esRutValido,
   esTelefonoValido,
   formatearRut,
+  formatearTelefono,
   validarCredenciales,
   validarPostulacion,
 } from './validaciones.js';
@@ -13,12 +14,16 @@ test('valida el RUT chileno con dígito verificador', () => {
   assert.equal(esRutValido('12.345.678-5'), true);
   assert.equal(esRutValido('12.345.678-9'), false);
   assert.equal(formatearRut('123456785'), '12.345.678-5');
+  assert.equal(formatearRut('1234'), '1.234');
+  assert.equal(formatearRut('12345678'), '1.234.567-8');
 });
 
 test('valida teléfonos móviles', () => {
   assert.equal(esTelefonoValido('9 1234 5678'), true);
   assert.equal(esTelefonoValido('+56 9 1234 5678'), true);
   assert.equal(esTelefonoValido('2 345 6789'), false);
+  assert.equal(formatearTelefono('912345678'), '9 1234 5678');
+  assert.equal(formatearTelefono('+56 9 1234 5678'), '9 1234 5678');
 });
 
 test('valida el CV adjunto por extensión y tamaño', () => {

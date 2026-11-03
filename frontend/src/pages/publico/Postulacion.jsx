@@ -225,7 +225,9 @@ export default function Postulacion() {
                   name="rut"
                   type="text"
                   className="control-campo"
-                  inputMode="numeric"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   maxLength={12}
                   placeholder="12.345.678-5"
                   value={formulario.rut}
@@ -241,6 +243,7 @@ export default function Postulacion() {
                   type="email"
                   className="control-campo"
                   autoComplete="email"
+                  maxLength={120}
                   placeholder="nombre@correo.cl"
                   value={formulario.correo}
                   onChange={modificar}

@@ -148,6 +148,20 @@ describe('AppLayout', () => {
     expect(contenedor.querySelector('.barra-nav')).toBeNull();
     expect(contenedor.querySelector('.pie-compacto')).not.toBeNull();
     expect(contenedor.querySelector('.layout-main').classList.contains('contenido-privado')).toBeTrue();
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-evaluador')).toBeTrue();
+  });
+
+  it('aplica el tema visual de analista sin quitar el sidebar', () => {
+    localStorage.setItem(
+      CLAVE_USUARIO,
+      JSON.stringify({ ...usuarioDemo, rol: 'analista' }),
+    );
+    montaje = montar('/dashboard');
+    const { contenedor } = montaje;
+
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-analista')).toBeTrue();
+    expect(contenedor.querySelector('.menu-lateral')).not.toBeNull();
+    expect(contenedor.querySelector('.menu-usuario-datos small').textContent).toContain('Analista');
   });
 
   it('abre y cierra el menú lateral en móvil', () => {

@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "AquaChile: backend",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": ["/d", "/c", "npm.cmd run dev:backend"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "detail": "API Express en http://127.0.0.1:5000",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "clear": true
+      }
+    },
+    {
+      "label": "AquaChile: frontend",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": ["/d", "/c", "npm.cmd run dev:frontend"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "detail": "Interfaz Vite en http://localhost:5173",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "clear": true
+      }
+    },
+    {
+      "label": "AquaChile: iniciar todo",
+      "detail": "Inicia backend y frontend en paralelo",
+      "dependsOrder": "parallel",
+      "dependsOn": ["AquaChile: backend", "AquaChile: frontend"],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}

@@ -176,6 +176,17 @@ export const dbUsuarios = {
   },
 };
 
+export const cerrarBaseDatos = () => {
+  if (instancia) {
+    try {
+      instancia.close();
+    } catch {
+      // No hace nada si ya está cerrada.
+    }
+    instancia = null;
+  }
+};
+
 export const dbArchivos = {
   listarPorCandidato: async (candidatoId) =>
     obtenerBd()

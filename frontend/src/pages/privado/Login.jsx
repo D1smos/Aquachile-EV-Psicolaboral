@@ -121,6 +121,7 @@ export default function Login() {
                 type="email"
                 className="control-campo"
                 autoComplete="username"
+                maxLength={120}
                 placeholder="nombre@aquachile.cl"
                 value={credenciales.email}
                 onChange={modificar}
@@ -142,6 +143,7 @@ export default function Login() {
                 type={verPassword ? 'text' : 'password'}
                 className="control-campo"
                 autoComplete="current-password"
+                maxLength={128}
                 placeholder="••••••••"
                 value={credenciales.password}
                 onChange={modificar}

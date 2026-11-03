@@ -3,6 +3,7 @@ import {
   esRutValido,
   esTelefonoValido,
   formatearRut,
+  formatearTelefono,
   validarPostulacion,
 } from './validaciones.js';
 
@@ -19,14 +20,18 @@ describe('validaciones de postulación', () => {
     expect(esCorreoValido('sin-arroba')).toBeFalse();
   });
 
-  it('valida móviles chilenos de 9 dígitos', () => {
+  it('valida y formatea móviles chilenos de 9 dígitos', () => {
     expect(esTelefonoValido('912345678')).toBeTrue();
     expect(esTelefonoValido('812345678')).toBeFalse();
     expect(esTelefonoValido('123')).toBeFalse();
+    expect(formatearTelefono('912345678')).toBe('9 1234 5678');
+    expect(formatearTelefono('+56 9 1234 5678')).toBe('9 1234 5678');
   });
 
   it('formatea el RUT con puntos y guion', () => {
     expect(formatearRut('123456785')).toBe('12.345.678-5');
+    expect(formatearRut('1234')).toBe('1.234');
+    expect(formatearRut('12345678')).toBe('1.234.567-8');
   });
 
   it('valida el formulario de postulación completo', () => {

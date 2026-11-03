@@ -3,11 +3,24 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar.jsx';
 import Footer from '../components/Footer.jsx';
 import Sidebar from '../components/Sidebar.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import './AppLayout.css';
+
+const claseTemaRol = (rol) => {
+  if (rol === 'psicologo') {
+    return 'tema-rol-evaluador';
+  }
+  if (rol === 'analista') {
+    return 'tema-rol-analista';
+  }
+  return '';
+};
 
 export default function AppLayout() {
   const { pathname } = useLocation();
+  const { usuario } = useAuth();
   const privada = pathname.startsWith('/dashboard');
+  const temaRol = claseTemaRol(usuario?.rol);
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   useEffect(() => {
@@ -45,7 +58,7 @@ export default function AppLayout() {
 
   if (privada) {
     return (
-      <div className="app-layout app-layout-privado">
+      <div className={`app-layout app-layout-privado ${temaRol}`}>
         <Sidebar abierto={menuAbierto} onCerrar={() => setMenuAbierto(false)} />
 
         {menuAbierto && (

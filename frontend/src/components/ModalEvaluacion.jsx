@@ -209,33 +209,6 @@ export default function ModalEvaluacion({
               </div>
             </dl>
 
-            <div className="estado-fila">
-              <label className="etiqueta-campo" htmlFor="estado-proceso">
-                Estado del proceso
-              </label>
-              <select
-                id="estado-proceso"
-                className="control-campo control-reducido"
-                value={formulario.estado}
-                onChange={cambiarEstado}
-              >
-                {estados.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {estado}
-                  </option>
-                ))}
-              </select>
-              <EstadoBadge estado={formulario.estado} />
-            </div>
-
-            <p className="nota-aprobacion">
-              <i className="bi bi-envelope-check" aria-hidden="true" />
-              <span>
-                Si el estado cambia a <strong>Aprobado</strong>, se enviará un correo automático a{' '}
-                {candidato.correo}.
-              </span>
-            </p>
-
             <div className="archivos-fila">
               <span className="etiqueta-campo">Documentos adjuntos</span>
               {archivos.length === 0 ? (
@@ -398,6 +371,35 @@ export default function ModalEvaluacion({
               }
             />
             <small className="contador">{formulario.observaciones.length}/1000</small>
+          </section>
+
+          <section className="modal-seccion cierre-proceso">
+            <h4 className="seccion-titulo">Cierre del proceso</h4>
+            <div className="estado-fila">
+              <label className="etiqueta-campo" htmlFor="estado-proceso">
+                Estado del proceso
+              </label>
+              <select
+                id="estado-proceso"
+                className="control-campo control-reducido"
+                value={formulario.estado}
+                onChange={cambiarEstado}
+              >
+                {estados.map((estado) => (
+                  <option key={estado} value={estado}>
+                    {estado}
+                  </option>
+                ))}
+              </select>
+              <EstadoBadge estado={formulario.estado} />
+            </div>
+            <p className="nota-aprobacion">
+              <i className="bi bi-envelope-check" aria-hidden="true" />
+              <span>
+                Si el estado cambia a <strong>Aprobado</strong>, se enviará un correo automático a{' '}
+                {candidato.correo}.
+              </span>
+            </p>
           </section>
         </div>
 
