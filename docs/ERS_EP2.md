@@ -6,11 +6,12 @@
 |---|---|
 | Asignatura | Desarrollo Full Stack II (DSY1104) |
 | Entrega | Evaluación Parcial 2 |
-| Versión del documento | 1.0 |
+| Versión del documento | 1.1 |
 | Fecha | 03-11-2026 |
-| Rama de entrega | `Vicente/Frontend` |
+| Rama de entrega | `main` |
 | Frontend | React 18 + Vite + React Router + Bootstrap 5 |
 | Backend | Node.js 24 + Express + SQLite/PostgreSQL |
+| Pruebas backend | `node:test` |
 | Pruebas frontend | Vitest + jsdom |
 
 ## 1. Propósito
@@ -35,7 +36,7 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 - Exportación CSV y ficha PDF.
 - Notificaciones por correo cuando corresponde.
 - Diseño responsive con Bootstrap 5 y estilos propios.
-- Pruebas automatizadas de backend y frontend con Vitest.
+- Pruebas automatizadas de backend con `node:test` y frontend con Vitest.
 
 ### 2.2 Fuera del alcance de esta entrega
 
@@ -44,6 +45,29 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 - Firma digital de documentos.
 - Integración con portales externos de empleo.
 - Aplicación móvil nativa.
+
+### 2.3 Funcionalidades pendientes
+
+| Pendiente | Motivo | Etapa prevista |
+|---|---|---|
+| Despliegue público | Requiere infraestructura y configuración de producción. | Hito 3 |
+| Supabase Storage | Los archivos se guardan en disco local. | Hito 3 |
+| Pruebas de modales | Se validan manualmente en la demo. | Mejora posterior |
+| Pruebas de `Inicio` y `RutaProtegida` | La cobertura se concentra en los flujos centrales. | Mejora posterior |
+| Accesibilidad avanzada | Existen etiquetas y focos, pero falta auditoría formal. | Mejora posterior |
+| Observabilidad | Hay logger básico, sin métricas centralizadas. | Hito 3 |
+
+### 2.4 Correspondencia con la problemática VcM
+
+| Problema de AquaChile | Funcionalidad del MVP |
+|---|---|
+| Solicitudes dispersas en Forms | Formulario público de postulación con folio. |
+| Control manual en Excel | Panel de candidatos con filtros, estados y métricas. |
+| Seguimiento en Planner | Historial de etapas y consulta pública por folio. |
+| CV dispersos en OneDrive | Carga y descarga asociada a cada candidato. |
+| Informes enviados por correo | Exportación CSV y ficha PDF. |
+| Evaluación heterogénea | Cuestionario estandarizado de 10 preguntas. |
+| Falta de trazabilidad | Historial con etapa, responsable, motivo y fecha. |
 
 ## 3. Actores y roles
 
@@ -93,7 +117,7 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 | RNF-07 | Mantenibilidad. | Separación en rutas, controladores, servicios, validadores, config y dominio. |
 | RNF-08 | Observabilidad básica. | Registro de eventos y errores con logger propio. |
 | RNF-09 | Accesibilidad. | Etiquetas, focos visibles, atributos ARIA, navegación por teclado y respeto a movimiento reducido. |
-| RNF-10 | Pruebas automatizadas. | 38 pruebas de backend con `node:test` y 44 pruebas de frontend con Vitest. |
+| RNF-10 | Pruebas automatizadas. | 38 pruebas de backend con `node:test` y 56 pruebas de frontend con Vitest. |
 | RNF-11 | Documentación de ejecución. | `SETUP.md` describe instalación, variables de entorno y solución de problemas. |
 | RNF-12 | Datos de demostración ficticios. | El seed usa nombres, RUT y correos de ejemplo; no contiene datos personales reales. |
 
@@ -166,8 +190,10 @@ Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivo
 ### 9.2 Frontend
 
 - Herramienta: Vitest con entorno jsdom.
-- Total: 44 pruebas en 10 archivos.
-- Cobertura funcional: utilidades de evaluación, validaciones, Navbar, AppLayout, Login, Consulta, Privacidad y tabla de candidatos.
+- Total: 56 pruebas en 12 archivos.
+- Cobertura funcional: utilidades de evaluación, validaciones, Navbar, AppLayout, Login, Consulta, Privacidad, tabla de candidatos, Dashboard y Postulación.
+- Cobertura global: 58,59% de líneas, 80,48% de ramas y 56,61% de funciones.
+- Cobertura destacada: utilidades 93,72%, Postulación 94,26%, Dashboard 63,09% y TablaCandidatos 100%.
 - Comandos:
   - `npm test --prefix frontend`
   - `npm run test:coverage --prefix frontend`
@@ -192,10 +218,11 @@ Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivo
 | Aplicación React con componentes y props | `frontend/src/components`, `frontend/src/pages`, `frontend/src/layouts`. |
 | Estado, eventos, filtros y rutas | `useState`, `useEffect`, `useMemo`, React Router y `FiltrosCandidatos`. |
 | Bootstrap 5 responsive | Importación de Bootstrap, grid de KPIs y utilidades responsive. |
-| Pruebas con Vitest | 44 pruebas Vitest, configuración y reporte de cobertura. |
+| Pruebas con Vitest | 56 pruebas Vitest, configuración y reporte de cobertura. |
 | Documento ERS | Este documento. |
-| Repositorio GitHub | Rama `Vicente/Frontend` y rama `main` actualizada. |
-| README de ejecución | Se mantiene el README existente; la guía detallada está en `SETUP.md`. |
+| Repositorio GitHub | Rama `main` actualizada. |
+| README de ejecución | `README.md` con instalación, ejecución y pruebas; detalle extendido en `SETUP.md`. |
+| Evidencia de pruebas | `docs/Evidencia_Vitest_EP2.md`. |
 
 ## 11. Datos de demostración y privacidad
 
@@ -209,7 +236,7 @@ Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivo
 
 | Riesgo o limitación | Impacto | Mitigación |
 |---|---|---|
-| Cobertura frontend concentrada en utilidades y flujos principales. | Menor evidencia sobre componentes grandes. | Se priorizan pruebas de integración y se documenta la cobertura real. |
+| Cobertura frontend global de 58,59%. | Los modales y pantallas secundarias no tienen pruebas directas. | Se cubren los flujos centrales y se documenta la cobertura real. |
 | Archivos en disco local. | No apto para despliegue multiinstancia. | Migración futura a Supabase Storage si el Hito 3 lo requiere. |
 | Dependencia de SMTP para correos. | Sin SMTP, el envío se omite y se informa. | Variables de entorno documentadas y degradación controlada. |
 | Datos demo en localStorage. | El seguimiento es local al navegador. | La consulta pública permite recuperar el estado con folio y RUT. |
@@ -220,3 +247,4 @@ Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivo
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 1.0 | 03-11-2026 | Documento ERS EP2 con alcance, requisitos, arquitectura, pruebas y trazabilidad. |
+| 1.1 | 03-11-2026 | Actualiza cifras de pruebas, agrega pendientes y correspondencia con la problemática VcM. |
