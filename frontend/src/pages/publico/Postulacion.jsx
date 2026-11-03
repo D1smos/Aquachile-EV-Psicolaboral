@@ -141,6 +141,14 @@ export default function Postulacion() {
 
     try {
       const respuesta = await api.post('/postulaciones', datos);
+      try {
+        localStorage.setItem(
+          'aquachile_ultima_postulacion',
+          JSON.stringify({ ...respuesta.candidato, rut: formulario.rut }),
+        );
+      } catch {
+        // Ignorar si el navegador bloquea localStorage
+      }
       setEnviado(respuesta.candidato);
       mostrarToast('Postulación enviada correctamente', 'exito');
     } catch (error) {

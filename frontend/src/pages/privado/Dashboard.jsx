@@ -15,6 +15,20 @@ import ModalEvaluacion from '../../components/ModalEvaluacion.jsx';
 import ModalHistorial from '../../components/ModalHistorial.jsx';
 import ModalNuevoCandidato from '../../components/ModalNuevoCandidato.jsx';
 
+
+const sincronizarSeguimientoLocal = (candidatoActualizado) => {
+  try {
+    const raw = localStorage.getItem('aquachile_ultima_postulacion');
+    if (!raw) return;
+    const previo = JSON.parse(raw);
+    if (previo?.folio === candidatoActualizado?.folio || previo?.id === candidatoActualizado?.id) {
+      localStorage.setItem('aquachile_ultima_postulacion', JSON.stringify({ ...previo, ...candidatoActualizado }));
+    }
+  } catch {
+    // Ignorar error de almacenamiento
+  }
+};
+
 const FILTROS_INICIALES = { busqueda: '', cargo: '', estado: '', desde: '', hasta: '' };
 const POR_PAGINA = 8;
 
@@ -155,7 +169,8 @@ export default function Dashboard() {
           'advertencia',
         );
       } else {
-        mostrarToast(datos.mensaje, 'exito');
+        sincronizarSeguimientoLocal(datos.candidato);
+      mostrarToast(datos.mensaje, 'exito');
       }
     } catch (capturado) {
       mostrarToast(capturado.message, 'error');
