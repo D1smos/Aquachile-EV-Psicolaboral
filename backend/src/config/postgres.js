@@ -248,12 +248,13 @@ export const dbCandidatos = {
     await asegurarEsquema();
     const resultado = await obtenerPool().query('SELECT * FROM candidatos ORDER BY fechaPostulacion DESC');
     return Promise.all(
-      resultado.rows.map(async (fila) =>
-        aCandidato(
-          normalizarFila(fila),
-          await dbArchivos.listarPorCandidato(fila.id),
-        ),
-      ),
+      resultado.rows.map(async (fila) => {
+        const normalizado = normalizarFila(fila);
+        return aCandidato(
+          normalizado,
+          await dbArchivos.listarPorCandidato(normalizado.id),
+        );
+      }),
     );
   },
   obtenerPorId: async (id) => {

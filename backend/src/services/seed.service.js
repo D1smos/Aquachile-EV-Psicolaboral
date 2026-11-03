@@ -102,3 +102,18 @@ export const inicializarBaseDatos = async () => {
     await sembrarDemo();
   }
 };
+
+export const reiniciarDemo = async () => {
+  await Promise.all([
+    mkdir(entorno.directorios.uploads, { recursive: true }),
+    mkdir(entorno.directorios.datos, { recursive: true }),
+  ]);
+  await sembrarEvaluador();
+  await sembrarAnalista();
+  const existentes = await dbCandidatos.listarTodos();
+  for (const candidato of existentes) {
+    await dbCandidatos.eliminar(candidato.id);
+  }
+  await sembrarDemo();
+  return dbCandidatos.listarTodos();
+};

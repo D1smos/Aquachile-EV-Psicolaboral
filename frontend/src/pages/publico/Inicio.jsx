@@ -1,5 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EstadoBadge from '../../components/EstadoBadge.jsx';
+import { api } from '../../services/api.js';
+
+const CLAVE_SEGUIMIENTO = 'aquachile_ultima_postulacion';
 
 const PASOS = [
   {
@@ -22,7 +26,73 @@ const PASOS = [
   },
 ];
 
+const leerSeguimientoLocal = () => {
+  try {
+    const guardado = localStorage.getItem(CLAVE_SEGUIMIENTO);
+    return guardado ? JSON.parse(guardado) : null;
+  } catch {
+    return null;
+  }
+};
+
+const calcularEtapa = (estado) => {
+  if (!estado) {
+    return 0;
+  }
+  if (estado === 'Pendiente') {
+    return 1;
+  }
+  if (estado === 'En Proceso') {
+    return 2;
+  }
+  return 3;
+};
+
 export default function Inicio() {
+  const [seguimiento, setSeguimiento] = useState(leerSeguimientoLocal);
+
+  useEffect(() => {
+    const actual = leerSeguimientoLocal();
+    if (!actual?.folio || !actual?.rut) {
+      return undefined;
+    }
+
+    let activo = true;
+    api
+      .post('/postulaciones/consulta', { folio: actual.folio, rut: actual.rut })
+      .then((datos) => {
+        const remoto = datos?.candidato ?? datos?.postulacion;
+        if (activo && remoto) {
+          const actualizado = { ...actual, ...remoto };
+          setSeguimiento(actualizado);
+          try {
+            localStorage.setItem(CLAVE_SEGUIMIENTO, JSON.stringify(actualizado));
+          } catch {
+            // Ignorar error de almacenamiento
+          }
+        }
+      })
+      .catch((error) => {
+        if (activo && error?.codigo === 404) {
+          setSeguimiento(null);
+          try {
+            localStorage.removeItem(CLAVE_SEGUIMIENTO);
+          } catch {
+            // Ignorar error de almacenamiento
+          }
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const etapa = calcularEtapa(seguimiento?.estado);
+  const clasePaso1 = etapa > 1 ? 'completado' : etapa === 1 ? 'activo' : '';
+  const clasePaso2 = etapa > 2 ? 'completado' : etapa === 2 ? 'activo' : '';
+  const clasePaso3 = etapa === 3 ? 'completado' : '';
+
   return (
     <div className="pagina-inicio">
       <section className="hero-postulacion hero-inicio">
@@ -57,44 +127,70 @@ export default function Inicio() {
             </Link>
           </div>
 
-          <div className="hero-panel" aria-hidden="true">
+          <div className="hero-panel">
             <div className="hero-panel-cabecera">
               <div>
                 <span className="hero-panel-eyebrow">Seguimiento</span>
-                <strong>Tu postulación</strong>
-                <small>Folio AC-2026-0142</small>
+                <strong>{seguimiento ? seguimiento.nombre : 'Tu postulación'}</strong>
+                <small>
+                  {seguimiento
+                    ? `Folio ${seguimiento.folio} · ${seguimiento.cargo}`
+                    : 'Aún no has enviado una postulación'}
+                </small>
               </div>
-              <EstadoBadge estado="En Proceso" />
+              {seguimiento ? (
+                <EstadoBadge estado={seguimiento.estado} />
+              ) : (
+                <span className="estado-badge estado-pendiente">Sin iniciar</span>
+              )}
             </div>
             <ol className="hero-panel-pasos">
-              <li className="completado">
+              <li className={clasePaso1}>
                 <span className="hero-panel-marca">
-                  <i className="bi bi-check2" />
+                  {etapa > 1 ? <i className="bi bi-check2" /> : '1'}
                 </span>
                 <div>
                   <strong>Postulación recibida</strong>
-                  <small>Datos y CV validados</small>
+                  <small>
+                    {etapa >= 1
+                      ? 'Datos y CV registrados'
+                      : 'Completa el formulario y adjunta tu CV'}
+                  </small>
                 </div>
               </li>
-              <li className="activo">
-                <span className="hero-panel-marca">2</span>
+              <li className={clasePaso2}>
+                <span className="hero-panel-marca">
+                  {etapa > 2 ? <i className="bi bi-check2" /> : '2'}
+                </span>
                 <div>
                   <strong>Entrevista psicolaboral</strong>
-                  <small>En revisión por el equipo</small>
+                  <small>
+                    {etapa === 2
+                      ? 'En revisión por el equipo'
+                      : etapa > 2
+                        ? 'Evaluación completada'
+                        : 'Revisión del equipo de selección'}
+                  </small>
                 </div>
               </li>
-              <li>
-                <span className="hero-panel-marca">3</span>
+              <li className={clasePaso3}>
+                <span className="hero-panel-marca">
+                  {etapa === 3 ? <i className="bi bi-check2" /> : '3'}
+                </span>
                 <div>
                   <strong>Resultado final</strong>
-                  <small>Te avisaremos por correo</small>
+                  <small>
+                    {etapa === 3
+                      ? `Proceso finalizado (${seguimiento.estado})`
+                      : 'Te avisaremos por correo'}
+                  </small>
                 </div>
               </li>
             </ol>
             <div className="hero-panel-pie">
               <i className="bi bi-shield-check" />
               Información confidencial
-              <span>Etapa 2 de 3</span>
+              <span>{`Etapa ${etapa} de 3`}</span>
             </div>
           </div>
         </div>

@@ -15,6 +15,20 @@ import ModalEvaluacion from '../../components/ModalEvaluacion.jsx';
 import ModalHistorial from '../../components/ModalHistorial.jsx';
 import ModalNuevoCandidato from '../../components/ModalNuevoCandidato.jsx';
 
+
+const sincronizarSeguimientoLocal = (candidatoActualizado) => {
+  try {
+    const raw = localStorage.getItem('aquachile_ultima_postulacion');
+    if (!raw) return;
+    const previo = JSON.parse(raw);
+    if (previo?.folio === candidatoActualizado?.folio || previo?.id === candidatoActualizado?.id) {
+      localStorage.setItem('aquachile_ultima_postulacion', JSON.stringify({ ...previo, ...candidatoActualizado }));
+    }
+  } catch {
+    // Ignorar error de almacenamiento
+  }
+};
+
 const FILTROS_INICIALES = { busqueda: '', cargo: '', estado: '', desde: '', hasta: '' };
 const POR_PAGINA = 8;
 
@@ -147,6 +161,7 @@ export default function Dashboard() {
         previos.map((candidato) => (candidato.id === id ? datos.candidato : candidato)),
       );
       setSeleccion((previo) => (previo?.id === id ? datos.candidato : previo));
+      sincronizarSeguimientoLocal(datos.candidato);
       if (datos.correo?.enviado) {
         mostrarToast(`${datos.mensaje} · correo de aceptación enviado`, 'exito');
       } else if (datos.correo) {
