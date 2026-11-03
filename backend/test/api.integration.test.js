@@ -203,8 +203,18 @@ test('una postulación pública aparece en el panel del evaluador', async () => 
   const tokenEvaluador = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
   const listado = await peticion('GET', '/candidatos', { token: tokenEvaluador });
   assert.equal(listado.respuesta.status, 200);
-  assert.ok(
-    listado.datos.candidatos.some((registro) => registro.folio === creada.candidato.folio),
-    'La postulación pública debe aparecer en el listado del evaluador',
+  const registro = listado.datos.candidatos.find(
+    (candidatoListado) => candidatoListado.folio === creada.candidato.folio,
   );
+  assert.ok(registro, 'La postulación pública debe aparecer en el listado del evaluador');
+  assert.equal(registro.archivos.length, 1);
+  assert.equal(registro.archivos[0].tipo, 'cv');
+  assert.equal(registro.archivos[0].nombreOriginal, 'cv-postulacion.pdf');
+
+  const descarga = await fetch(
+    `${baseUrl}/candidatos/${registro.id}/archivos/${registro.archivos[0].id}`,
+    { headers: { Authorization: `Bearer ${tokenEvaluador}` } },
+  );
+  assert.equal(descarga.status, 200);
+  assert.equal(await descarga.text(), '%PDF-1.4 postulación de prueba');
 });

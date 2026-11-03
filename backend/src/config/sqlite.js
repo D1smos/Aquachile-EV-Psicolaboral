@@ -220,7 +220,11 @@ export const dbCandidatos = {
     const filas = obtenerBd()
       .prepare('SELECT * FROM candidatos ORDER BY fechaPostulacion DESC')
       .all();
-    return filas.map((fila) => aCandidato(fila));
+    return Promise.all(
+      filas.map(async (fila) =>
+        aCandidato(fila, await dbArchivos.listarPorCandidato(fila.id)),
+      ),
+    );
   },
   obtenerPorId: async (id) => {
     const fila = obtenerBd().prepare('SELECT * FROM candidatos WHERE id = ?').get(String(id));

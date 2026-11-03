@@ -1,4 +1,5 @@
 import { act, createElement as h } from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../../context/AuthContext.jsx';

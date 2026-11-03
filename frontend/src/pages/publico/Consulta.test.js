@@ -1,4 +1,5 @@
 import { act, createElement as h } from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import Consulta from './Consulta.jsx';

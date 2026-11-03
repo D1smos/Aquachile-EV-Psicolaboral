@@ -1,4 +1,5 @@
 import { act, createElement as h } from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext.jsx';
@@ -109,14 +110,14 @@ describe('AppLayout', () => {
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('true');
-    expect(navegacion.classList.contains('navegacion-abierta')).toBeTrue();
+    expect(navegacion.classList.contains('navegacion-abierta')).toBe(true);
 
     act(() => {
       boton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('false');
-    expect(navegacion.classList.contains('navegacion-abierta')).toBeFalse();
+    expect(navegacion.classList.contains('navegacion-abierta')).toBe(false);
   });
 
   it('sin sesión muestra enlaces públicos e Ingresar', () => {
@@ -147,8 +148,8 @@ describe('AppLayout', () => {
     expect(contenedor.querySelector('.navegacion')).toBeNull();
     expect(contenedor.querySelector('.barra-nav')).toBeNull();
     expect(contenedor.querySelector('.pie-compacto')).not.toBeNull();
-    expect(contenedor.querySelector('.layout-main').classList.contains('contenido-privado')).toBeTrue();
-    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-evaluador')).toBeTrue();
+    expect(contenedor.querySelector('.layout-main').classList.contains('contenido-privado')).toBe(true);
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-evaluador')).toBe(true);
   });
 
   it('aplica el tema visual de analista sin quitar el sidebar', () => {
@@ -159,7 +160,7 @@ describe('AppLayout', () => {
     montaje = montar('/dashboard');
     const { contenedor } = montaje;
 
-    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-analista')).toBeTrue();
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-analista')).toBe(true);
     expect(contenedor.querySelector('.menu-lateral')).not.toBeNull();
     expect(contenedor.querySelector('.menu-usuario-datos small').textContent).toContain('Analista');
   });
@@ -172,14 +173,14 @@ describe('AppLayout', () => {
     const menu = contenedor.querySelector('.menu-lateral');
 
     expect(boton.getAttribute('aria-expanded')).toBe('false');
-    expect(menu.classList.contains('menu-lateral-abierto')).toBeFalse();
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(false);
 
     act(() => {
       boton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('true');
-    expect(menu.classList.contains('menu-lateral-abierto')).toBeTrue();
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(true);
     expect(contenedor.querySelector('.menu-overlay')).not.toBeNull();
     expect(document.body.style.overflow).toBe('hidden');
 
@@ -190,7 +191,7 @@ describe('AppLayout', () => {
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('false');
-    expect(menu.classList.contains('menu-lateral-abierto')).toBeFalse();
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(false);
     expect(contenedor.querySelector('.menu-overlay')).toBeNull();
     expect(document.body.style.overflow).toBe('');
   });

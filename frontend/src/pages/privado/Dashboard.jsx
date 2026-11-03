@@ -275,35 +275,43 @@ export default function Dashboard() {
 
       {!cargando && !error && (
         <>
-          <section className="rejilla-kpi" id="metricas" aria-label="Métricas del proceso">
-            <TarjetaMetrica
-              titulo="Total candidatos"
-              valor={metricas.totalCandidatos}
-              detalle={`${metricas.porEstado.Pendiente} pendientes de revisión`}
-              tono="azul"
-              icono="bi-people-fill"
-            />
-            <TarjetaMetrica
-              titulo="Postulaciones del mes"
-              valor={metricas.postulacionesMes}
-              detalle="Registradas en el mes en curso"
-              tono="cian"
-              icono="bi-calendar-plus-fill"
-            />
-            <TarjetaMetrica
-              titulo="Evaluaciones completadas"
-              valor={formatearPorcentaje(metricas.pctEvaluacionesCompletadas)}
-              detalle={`${metricas.evaluacionesCompletadas} de ${metricas.totalCandidatos} candidatos`}
-              tono="verde"
-              icono="bi-clipboard2-check-fill"
-            />
-            <TarjetaMetrica
-              titulo="Aprobados"
-              valor={metricas.porEstado.Aprobado}
-              detalle={`${metricas.porEstado.Rechazado} rechazados · ${metricas.porEstado['En Proceso']} en proceso`}
-              tono="naranja"
-              icono="bi-patch-check-fill"
-            />
+          <section className="rejilla-kpi row g-3" id="metricas" aria-label="Métricas del proceso">
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Total candidatos"
+                valor={metricas.totalCandidatos}
+                detalle={`${metricas.porEstado.Pendiente} pendientes de revisión`}
+                tono="azul"
+                icono="bi-people-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Postulaciones del mes"
+                valor={metricas.postulacionesMes}
+                detalle="Registradas en el mes en curso"
+                tono="cian"
+                icono="bi-calendar-plus-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Evaluaciones completadas"
+                valor={formatearPorcentaje(metricas.pctEvaluacionesCompletadas)}
+                detalle={`${metricas.evaluacionesCompletadas} de ${metricas.totalCandidatos} candidatos`}
+                tono="verde"
+                icono="bi-clipboard2-check-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Aprobados"
+                valor={metricas.porEstado.Aprobado}
+                detalle={`${metricas.porEstado.Rechazado} rechazados · ${metricas.porEstado['En Proceso']} en proceso`}
+                tono="naranja"
+                icono="bi-patch-check-fill"
+              />
+            </div>
           </section>
 
           <FiltrosCandidatos

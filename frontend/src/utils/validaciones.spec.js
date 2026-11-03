@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import {
   esCorreoValido,
   esRutValido,
@@ -9,21 +10,21 @@ import {
 
 describe('validaciones de postulación', () => {
   it('acepta RUT válidos y rechaza inválidos', () => {
-    expect(esRutValido('12.345.678-5')).toBeTrue();
-    expect(esRutValido('11.111.111-1')).toBeTrue();
-    expect(esRutValido('12.345.678-9')).toBeFalse();
-    expect(esRutValido('')).toBeFalse();
+    expect(esRutValido('12.345.678-5')).toBe(true);
+    expect(esRutValido('11.111.111-1')).toBe(true);
+    expect(esRutValido('12.345.678-9')).toBe(false);
+    expect(esRutValido('')).toBe(false);
   });
 
   it('valida correos electrónicos', () => {
-    expect(esCorreoValido('ana@correo.cl')).toBeTrue();
-    expect(esCorreoValido('sin-arroba')).toBeFalse();
+    expect(esCorreoValido('ana@correo.cl')).toBe(true);
+    expect(esCorreoValido('sin-arroba')).toBe(false);
   });
 
   it('valida y formatea móviles chilenos de 9 dígitos', () => {
-    expect(esTelefonoValido('912345678')).toBeTrue();
-    expect(esTelefonoValido('812345678')).toBeFalse();
-    expect(esTelefonoValido('123')).toBeFalse();
+    expect(esTelefonoValido('912345678')).toBe(true);
+    expect(esTelefonoValido('812345678')).toBe(false);
+    expect(esTelefonoValido('123')).toBe(false);
     expect(formatearTelefono('912345678')).toBe('9 1234 5678');
     expect(formatearTelefono('+56 9 1234 5678')).toBe('9 1234 5678');
   });
@@ -48,13 +49,13 @@ describe('validaciones de postulación', () => {
       motivacion: '',
       aceptaPrivacidad: true,
     };
-    expect(validarPostulacion(formulario, { cv: { name: 'cv.pdf', size: 1000 } }).valido).toBeTrue();
+    expect(validarPostulacion(formulario, { cv: { name: 'cv.pdf', size: 1000 } }).valido).toBe(true);
     expect(
       validarPostulacion(
         { ...formulario, aceptaPrivacidad: false },
         { cv: { name: 'cv.pdf', size: 1000 } },
       ).valido,
-    ).toBeFalse();
-    expect(validarPostulacion({}, {}).valido).toBeFalse();
+    ).toBe(false);
+    expect(validarPostulacion({}, {}).valido).toBe(false);
   });
 });
