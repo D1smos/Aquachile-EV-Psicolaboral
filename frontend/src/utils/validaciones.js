@@ -36,26 +36,34 @@ export const esRutValido = (valor) => {
   return esperado === verificador;
 };
 
+const agruparMiles = (digitos) => digitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
 export const formatearRut = (valor) => {
   const limpio = String(valor ?? '')
     .replace(/[^0-9k]/gi, '')
     .toUpperCase();
-  if (limpio.length < 2) {
-    return limpio;
+  if (!limpio) {
+    return '';
   }
-  const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${cuerpo}-${limpio.slice(-1)}`;
+  if (limpio.length <= 7) {
+    return agruparMiles(limpio);
+  }
+  return `${agruparMiles(limpio.slice(0, -1))}-${limpio.slice(-1)}`;
 };
 
 export const formatearTelefono = (valor) => {
-  const digitos = soloDigitos(valor).slice(0, 9);
-  if (digitos.length <= 4) {
+  let digitos = soloDigitos(valor);
+  if (digitos.startsWith('56') && digitos.length === 11) {
+    digitos = digitos.slice(2);
+  }
+  digitos = digitos.slice(0, 9);
+  if (digitos.length <= 1) {
     return digitos;
   }
-  if (digitos.length <= 7) {
-    return `${digitos.slice(0, 4)} ${digitos.slice(4)}`;
+  if (digitos.length <= 5) {
+    return `${digitos.slice(0, 1)} ${digitos.slice(1)}`;
   }
-  return `${digitos.slice(0, 4)} ${digitos.slice(4, 7)} ${digitos.slice(7)}`;
+  return `${digitos.slice(0, 1)} ${digitos.slice(1, 5)} ${digitos.slice(5)}`;
 };
 
 const extensionDe = (archivo) => String(archivo?.name ?? '').split('.').pop()?.toLowerCase() ?? '';

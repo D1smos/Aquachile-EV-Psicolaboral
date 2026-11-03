@@ -93,7 +93,9 @@ export default function Consulta() {
                     type="text"
                     className="control-campo"
                     autoComplete="off"
-                    maxLength={14}
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={16}
                     placeholder="AQ-2026-ABC12345"
                     value={formulario.folio}
                     onChange={modificar}
@@ -117,7 +119,9 @@ export default function Consulta() {
                     name="rut"
                     type="text"
                     className="control-campo"
-                    inputMode="numeric"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    spellCheck={false}
                     maxLength={12}
                     placeholder="12.345.678-5"
                     value={formulario.rut}

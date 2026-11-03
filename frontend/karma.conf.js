@@ -1,3 +1,18 @@
+import { existsSync } from 'node:fs';
+
+const RUTAS_NAVEGADOR = [
+  process.env.CHROME_BIN,
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+].filter(Boolean);
+
+const navegadorDisponible = RUTAS_NAVEGADOR.find((ruta) => existsSync(ruta));
+if (navegadorDisponible && !process.env.CHROME_BIN) {
+  process.env.CHROME_BIN = navegadorDisponible;
+}
+
 export default function configurar(config) {
   config.set({
     frameworks: ['vite', 'jasmine'],

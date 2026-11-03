@@ -23,6 +23,7 @@ process.env.SMTP_HOST = '';
 const { crearApp } = await import('../src/app.js');
 const { inicializarBaseDatos } = await import('../src/services/seed.service.js');
 const { crearPostulacion } = await import('../src/services/candidato.service.js');
+const { cerrarBaseDatos } = await import('../src/config/sqlite.js');
 
 await inicializarBaseDatos();
 
@@ -33,6 +34,7 @@ const baseUrl = `http://127.0.0.1:${servidor.address().port}/api`;
 
 after(async () => {
   await new Promise((resolver) => servidor.close(resolver));
+  cerrarBaseDatos();
   await rm(directorioPrueba, { recursive: true, force: true });
 });
 
@@ -178,4 +180,31 @@ test('permisos de candidatos y consulta pública', async (t) => {
       },
     );
   });
+});
+
+test('una postulación pública aparece en el panel del evaluador', async () => {
+  const formulario = new FormData();
+  const datos = datosCandidato({ rut: '22.222.222-2', correo: 'http@example.com' });
+  Object.entries(datos).forEach(([campo, valor]) => formulario.append(campo, String(valor)));
+  formulario.append(
+    'cv',
+    new Blob(['%PDF-1.4 postulación de prueba'], { type: 'application/pdf' }),
+    'cv-postulacion.pdf',
+  );
+
+  const creacion = await fetch(`${baseUrl}/postulaciones`, {
+    method: 'POST',
+    body: formulario,
+  });
+  const creada = await creacion.json();
+  assert.equal(creacion.status, 201);
+  assert.ok(creada.candidato.folio);
+
+  const tokenEvaluador = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
+  const listado = await peticion('GET', '/candidatos', { token: tokenEvaluador });
+  assert.equal(listado.respuesta.status, 200);
+  assert.ok(
+    listado.datos.candidatos.some((registro) => registro.folio === creada.candidato.folio),
+    'La postulación pública debe aparecer en el listado del evaluador',
+  );
 });
