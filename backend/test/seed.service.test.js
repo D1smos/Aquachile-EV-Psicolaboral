@@ -16,3 +16,9 @@ test('los correos del lote demo son únicos', () => {
   const correos = RONDAS_DEMO.map((demo) => demo.correo);
   assert.equal(new Set(correos).size, correos.length);
 });
+
+test('el lote demo usa correos ficticios de ejemplo', () => {
+  for (const demo of RONDAS_DEMO) {
+    assert.match(demo.correo, /@correo\.cl$/);
+  }
+});

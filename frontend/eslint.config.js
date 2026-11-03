@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'cobertura', 'coverage'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -44,7 +44,7 @@ export default [
   {
     files: ['**/*.spec.js', '**/*.test.{js,jsx}'],
     languageOptions: {
-      globals: globals.jasmine,
+      globals: globals.vitest,
     },
   },
 ];
