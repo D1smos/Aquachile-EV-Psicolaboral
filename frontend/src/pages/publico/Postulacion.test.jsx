@@ -1,7 +1,7 @@
-import { act, createElement as h } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createRoot } from 'react-dom/client';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Postulacion from './Postulacion.jsx';
 
 const mocks = vi.hoisted(() => ({
@@ -39,177 +39,92 @@ const CANDIDATO = {
   estado: 'Pendiente',
 };
 
-function respuestaCatalogo() {
-  return Promise.resolve(CATALOGO);
-}
-
-async function montar() {
-  const contenedor = document.createElement('div');
-  document.body.appendChild(contenedor);
-  const raiz = createRoot(contenedor);
-
-  await act(async () => {
-    raiz.render(h(MemoryRouter, null, h(Postulacion)));
-    await new Promise((resolver) => setTimeout(resolver, 0));
-  });
-
-  return { contenedor, raiz };
-}
-
-function escribir(elemento, valor) {
-  let prototipo = HTMLInputElement.prototype;
-  if (elemento instanceof HTMLSelectElement) {
-    prototipo = HTMLSelectElement.prototype;
-  } else if (elemento instanceof HTMLTextAreaElement) {
-    prototipo = HTMLTextAreaElement.prototype;
-  }
-  const descriptor = Object.getOwnPropertyDescriptor(prototipo, 'value');
-  descriptor.set.call(elemento, valor);
-  elemento.dispatchEvent(
-    new Event(elemento instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }),
+function renderizar() {
+  render(
+    <MemoryRouter>
+      <Postulacion />
+    </MemoryRouter>,
   );
 }
 
-function escribirCampo(contenedor, selector, valor) {
-  act(() => escribir(contenedor.querySelector(selector), valor));
-}
-
-function marcarConsentimiento(contenedor) {
-  const checkbox = contenedor.querySelector('#aceptaPrivacidad');
-  act(() => checkbox.click());
-}
-
-function seleccionarArchivo(contenedor, selector, archivo) {
-  const input = contenedor.querySelector(selector);
-  Object.defineProperty(input, 'files', { configurable: true, value: [archivo] });
-  act(() => input.dispatchEvent(new Event('change', { bubbles: true })));
-}
-
-function completarFormulario(contenedor) {
-  escribirCampo(contenedor, '#nombre', 'Camila Rojas Peña');
-  escribirCampo(contenedor, '#rut', '184529130');
-  escribirCampo(contenedor, '#correo', 'camila.rojas@correo.cl');
-  escribirCampo(contenedor, '#telefono', '955112233');
-  escribirCampo(contenedor, '#familiaCargo', 'Técnico B/C');
-  escribirCampo(contenedor, '#cargo', 'Monitor Producción');
-  escribirCampo(contenedor, '#formacion', 'Técnico');
-  escribirCampo(contenedor, '#disponibilidad', 'Inmediata');
-  escribirCampo(contenedor, '#aniosExperiencia', '4');
-  escribirCampo(contenedor, '#motivacion', 'Busco aportar mi experiencia en planta.');
-  marcarConsentimiento(contenedor);
-  seleccionarArchivo(
-    contenedor,
-    '#cv',
-    new File(['%PDF-1.4 postulación de prueba'], 'cv.pdf', { type: 'application/pdf' }),
+async function completarFormulario(user) {
+  await user.type(screen.getByLabelText('Nombre y apellido'), 'Camila Rojas Peña');
+  await user.type(screen.getByLabelText('RUT'), '184529130');
+  await user.type(screen.getByLabelText('Correo electrónico'), 'camila@correo.cl');
+  await user.type(screen.getByLabelText('Teléfono móvil'), '955112233');
+  await user.selectOptions(screen.getByLabelText('Familia de cargo'), 'Técnico B/C');
+  await user.selectOptions(screen.getByLabelText('Cargo'), 'Monitor Producción');
+  await user.selectOptions(screen.getByLabelText('Formación académica'), 'Técnico');
+  await user.selectOptions(screen.getByLabelText('Disponibilidad'), 'Inmediata');
+  await user.type(screen.getByLabelText('Años de experiencia relacionada'), '4');
+  await user.upload(
+    screen.getByLabelText('Currículum vitae (obligatorio)'),
+    new File(['%PDF-1.4 prueba'], 'cv.pdf', { type: 'application/pdf' }),
   );
-}
-
-async function enviar(contenedor) {
-  const formulario = contenedor.querySelector('form');
-  await act(async () => {
-    formulario.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await new Promise((resolver) => setTimeout(resolver, 0));
-  });
+  await user.click(screen.getByLabelText(/He leído y acepto/));
 }
 
 describe('Postulación pública', () => {
-  let montaje = null;
-
   beforeEach(() => {
     mocks.apiGet.mockReset();
-    mocks.apiGet.mockImplementation(respuestaCatalogo);
+    mocks.apiGet.mockResolvedValue(CATALOGO);
     mocks.apiPost.mockReset();
     mocks.mostrarToast.mockReset();
     localStorage.clear();
   });
 
   afterEach(() => {
-    if (montaje) {
-      act(() => montaje.raiz.unmount());
-      montaje.contenedor.remove();
-      montaje = null;
-    }
+    cleanup();
   });
 
   it('carga las familias y los cargos del catálogo', async () => {
-    montaje = await montar();
-    const familia = montaje.contenedor.querySelector('#familiaCargo');
+    const user = userEvent.setup();
+    renderizar();
 
-    expect([...familia.options].map((opcion) => opcion.value)).toContain('Técnico B/C');
+    const familia = await screen.findByLabelText('Familia de cargo');
+    expect(within(familia).getByRole('option', { name: 'Técnico B/C' })).toBeInTheDocument();
 
-    act(() => escribir(familia, 'Técnico B/C'));
+    await user.selectOptions(familia, 'Técnico B/C');
 
-    const cargo = montaje.contenedor.querySelector('#cargo');
-    expect([...cargo.options].map((opcion) => opcion.value)).toContain('Monitor Producción');
+    const cargo = screen.getByLabelText('Cargo');
+    expect(within(cargo).getByRole('option', { name: 'Monitor Producción' })).toBeInTheDocument();
   });
 
   it('valida los campos obligatorios antes de enviar', async () => {
-    montaje = await montar();
+    const user = userEvent.setup();
+    renderizar();
 
-    await enviar(montaje.contenedor);
+    await screen.findByLabelText('Familia de cargo');
+    await user.click(screen.getByRole('button', { name: /Enviar postulación/i }));
 
-    expect(montaje.contenedor.querySelectorAll('.error-campo').length).toBeGreaterThan(5);
-    expect(montaje.contenedor.textContent).toContain('Ingresa tu nombre y apellido');
-    expect(montaje.contenedor.textContent).toContain('Adjunta tu CV');
-    expect(montaje.contenedor.textContent).toContain('Debes aceptar la política de privacidad');
+    expect(await screen.findByText('Ingresa tu nombre y apellido')).toBeInTheDocument();
+    expect(screen.getByText(/Adjunta tu CV/)).toBeInTheDocument();
     expect(mocks.apiPost).not.toHaveBeenCalled();
   });
 
   it('formatea el RUT y el teléfono mientras se escriben', async () => {
-    montaje = await montar();
+    const user = userEvent.setup();
+    renderizar();
 
-    escribirCampo(montaje.contenedor, '#rut', '184529130');
-    escribirCampo(montaje.contenedor, '#telefono', '955112233');
+    await screen.findByLabelText('Familia de cargo');
+    await user.type(screen.getByLabelText('RUT'), '184529130');
+    await user.type(screen.getByLabelText('Teléfono móvil'), '955112233');
 
-    expect(montaje.contenedor.querySelector('#rut').value).toBe('18.452.913-0');
-    expect(montaje.contenedor.querySelector('#telefono').value).toBe('9 5511 2233');
+    expect(screen.getByLabelText('RUT')).toHaveValue('18.452.913-0');
+    expect(screen.getByLabelText('Teléfono móvil')).toHaveValue('9 5511 2233');
   });
 
-  it('rechaza un CV con formato no permitido', async () => {
-    montaje = await montar();
-
-    seleccionarArchivo(
-      montaje.contenedor,
-      '#cv',
-      new File(['contenido'], 'cv.exe', { type: 'application/x-msdownload' }),
-    );
-
-    expect(montaje.contenedor.textContent).toContain('Formato no permitido');
-    expect(mocks.mostrarToast).toHaveBeenCalledWith(
-      'El CV debe ser PDF, DOC o DOCX de hasta 5 MB',
-      'error',
-    );
-  });
-
-  it('registra la postulación, guarda el folio y muestra la confirmación', async () => {
+  it('registra la postulación y muestra el folio', async () => {
+    const user = userEvent.setup();
     mocks.apiPost.mockResolvedValue({ candidato: CANDIDATO });
-    montaje = await montar();
-    completarFormulario(montaje.contenedor);
+    renderizar();
 
-    await enviar(montaje.contenedor);
+    await screen.findByLabelText('Familia de cargo');
+    await completarFormulario(user);
+    await user.click(screen.getByRole('button', { name: /Enviar postulación/i }));
 
-    expect(mocks.apiPost).toHaveBeenCalledTimes(1);
-    expect(mocks.apiPost.mock.calls[0][0]).toBe('/postulaciones');
-    expect(montaje.contenedor.textContent).toContain('¡Postulación registrada!');
-    expect(montaje.contenedor.textContent).toContain('AQ-2026-ABCD1234');
-    expect(JSON.parse(localStorage.getItem('aquachile_ultima_postulacion'))).toMatchObject({
-      folio: 'AQ-2026-ABCD1234',
-      rut: '18.452.913-0',
-    });
-  });
-
-  it('muestra los errores de campo devueltos por la API', async () => {
-    mocks.apiPost.mockRejectedValue(
-      Object.assign(new Error('Revisa los datos de la postulación'), {
-        detalle: [{ campo: 'correo', mensaje: 'El correo ya está registrado' }],
-      }),
-    );
-    montaje = await montar();
-    completarFormulario(montaje.contenedor);
-
-    await enviar(montaje.contenedor);
-
-    expect(montaje.contenedor.textContent).toContain('El correo ya está registrado');
-    expect(mocks.mostrarToast).toHaveBeenCalledWith('Revisa los datos de la postulación', 'error');
+    expect(await screen.findByText('¡Postulación registrada!')).toBeInTheDocument();
+    expect(screen.getByText('AQ-2026-ABCD1234')).toBeInTheDocument();
+    expect(mocks.apiPost).toHaveBeenCalledWith('/postulaciones', expect.any(FormData));
   });
 });

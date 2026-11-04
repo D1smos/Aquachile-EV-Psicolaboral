@@ -6,11 +6,11 @@
 |---|---|
 | Fecha de ejecución | 03-11-2026 |
 | Backend | `node:test` |
-| Frontend | Vitest 2.1.9 + jsdom |
+| Frontend | Vitest 2.1.9 + Testing Library + jsdom |
 | Resultado backend | 38/38 |
-| Resultado frontend | 56/56 |
-| Total | 94/94 |
-| Cobertura frontend | 58,59% líneas · 80,48% ramas · 56,61% funciones |
+| Resultado frontend | 52/52 |
+| Total | 90/90 |
+| Cobertura frontend | 57,85% líneas · 80,33% ramas · 55,88% funciones |
 
 ## 1. Comandos ejecutados
 
@@ -30,7 +30,7 @@ fail 0
 
 Frontend:
 Test Files  12 passed (12)
-Tests       56 passed (56)
+Tests       52 passed (52)
 ```
 
 El frontend no utiliza Karma ni Jasmine. La suite se ejecuta con Vitest sobre jsdom y no requiere abrir un navegador externo.
@@ -47,11 +47,11 @@ El frontend no utiliza Karma ni Jasmine. La suite se ejecuta con Vitest sobre js
 | `src/components/TablaCandidatos.test.js` | 2 | Acciones visibles según rol. |
 | `src/layouts/AppLayout.test.js` | 9 | Navbar, contenido y footer. |
 | `src/pages/privado/Login.test.js` | 2 | Validación y cuentas de demostración. |
-| `src/pages/privado/Dashboard.test.jsx` | 6 | Métricas, filtros, paginación, error, reintento y roles. |
-| `src/pages/publico/Postulacion.test.jsx` | 6 | Catálogo, validaciones, formato, CV, envío y errores de API. |
+| `src/pages/privado/Dashboard.test.jsx` | 4 | Métricas, filtros, error de carga y roles. |
+| `src/pages/publico/Postulacion.test.jsx` | 4 | Catálogo, validaciones, formato y envío con folio. |
 | `src/pages/publico/Consulta.test.js` | 3 | Validación y consulta sin datos sensibles. |
 | `src/pages/publico/Privacidad.test.js` | 1 | Contenido de privacidad. |
-| **Total** | **56** | |
+| **Total** | **52** | |
 
 ## 4. Inventario de pruebas backend
 
@@ -68,12 +68,12 @@ El frontend no utiliza Karma ni Jasmine. La suite se ejecuta con Vitest sobre js
 
 | Archivo o grupo | Líneas |
 |---|---:|
-| Global | 58,59% |
+| Global | 57,85% |
 | `src/utils/evaluacionUtils.js` | 97,64% |
-| `src/utils/validaciones.js` | 88,72% |
-| `src/pages/publico/Postulacion.jsx` | 94,26% |
+| `src/utils/validaciones.js` | 91,72% |
+| `src/pages/publico/Postulacion.jsx` | 91,83% |
 | `src/pages/publico/Consulta.jsx` | 94,30% |
-| `src/pages/privado/Dashboard.jsx` | 63,09% |
+| `src/pages/privado/Dashboard.jsx` | 57,74% |
 | `src/pages/privado/Login.jsx` | 82,18% |
 | `src/components/TablaCandidatos.jsx` | 100% |
 | `src/components/TarjetaMetrica.jsx` | 100% |
@@ -89,11 +89,11 @@ Se prueban RUT, teléfono, correo y archivos porque son los puntos de entrada de
 
 ### Postulación
 
-Se prueban catálogos, formato de RUT/teléfono, CV inválido, consentimiento, envío exitoso, folio y errores de API porque es el flujo principal del postulante.
+Se prueban catálogos, formato de RUT/teléfono, campos obligatorios, consentimiento, envío exitoso y folio porque es el flujo principal del postulante.
 
 ### Dashboard
 
-Se prueban métricas, filtros sin tildes, paginación, error de carga, reintento y permisos por rol porque es el flujo principal del equipo interno.
+Se prueban métricas, filtros sin tildes, error de carga y permisos por rol porque es el flujo principal del equipo interno.
 
 ### Componentes
 
@@ -113,8 +113,8 @@ Se prueban autenticación, permisos, duplicados, consulta pública, evaluación,
 ## 8. Cómo demostrar la evidencia en la defensa
 
 1. Ejecutar `npm test`.
-2. Mostrar 38 pruebas backend y 56 frontend.
+2. Mostrar 38 pruebas backend y 52 frontend.
 3. Ejecutar `npm run test:coverage --prefix frontend`.
 4. Abrir el reporte HTML en `frontend/cobertura/`.
-5. Explicar por qué Postulación y Dashboard son los flujos con mayor cobertura.
+5. Explicar por qué Postulación, utilidades y Consulta tienen mayor cobertura.
 6. Explicar por qué los modales quedan como prueba manual o pendiente.

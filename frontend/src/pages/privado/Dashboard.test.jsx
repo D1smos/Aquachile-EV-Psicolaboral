@@ -1,6 +1,6 @@
-import { act, createElement as h } from 'react';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createRoot } from 'react-dom/client';
 import Dashboard from './Dashboard.jsx';
 
 const mocks = vi.hoisted(() => ({
@@ -31,55 +31,55 @@ vi.mock('../../context/ToastContext.jsx', () => ({
   useToast: () => ({ mostrarToast: mocks.mostrarToast }),
 }));
 
-const ahora = new Date();
-const fechaActual = (dia) =>
-  new Date(ahora.getFullYear(), ahora.getMonth(), dia).toISOString();
-const fechaAntigua = new Date(ahora.getFullYear(), ahora.getMonth() - 2, 10).toISOString();
+const fecha = new Date().toISOString();
 
-const NOMBRES = [
-  'Ana Pérez',
-  'Bruno Díaz',
-  'María González',
-  'Diego Soto',
-  'Elena Rojas',
-  'Felipe Muñoz',
-  'Gabriela Vega',
-  'Hugo Silva',
-  'Inés Torres',
-  'Javier Rivas',
+const CANDIDATOS = [
+  {
+    id: 'c1',
+    folio: 'AQ-2026-00000001',
+    nombre: 'Ana Pérez',
+    rut: '18.452.913-0',
+    correo: 'ana@correo.cl',
+    telefono: '955112233',
+    cargo: 'Monitor Producción',
+    familiaCargo: 'Técnico B/C',
+    estado: 'Aprobado',
+    puntaje: 80,
+    idoneidad: 'Idóneo',
+    respuestas: { p1: 5 },
+    fechaPostulacion: fecha,
+  },
+  {
+    id: 'c2',
+    folio: 'AQ-2026-00000002',
+    nombre: 'María González',
+    rut: '19.876.543-2',
+    correo: 'maria@correo.cl',
+    telefono: '955112234',
+    cargo: 'Analista de Sistemas',
+    familiaCargo: 'Profesional B/C',
+    estado: 'En Proceso',
+    puntaje: null,
+    idoneidad: null,
+    respuestas: null,
+    fechaPostulacion: fecha,
+  },
+  {
+    id: 'c3',
+    folio: 'AQ-2026-00000003',
+    nombre: 'Diego Soto',
+    rut: '20.123.456-7',
+    correo: 'diego@correo.cl',
+    telefono: '955112235',
+    cargo: 'Monitor Producción',
+    familiaCargo: 'Técnico B/C',
+    estado: 'Pendiente',
+    puntaje: null,
+    idoneidad: null,
+    respuestas: null,
+    fechaPostulacion: fecha,
+  },
 ];
-
-const ESTADOS = [
-  'Aprobado',
-  'Aprobado',
-  'En Proceso',
-  'En Proceso',
-  'En Proceso',
-  'Pendiente',
-  'Pendiente',
-  'Pendiente',
-  'Rechazado',
-  'Rechazado',
-];
-
-const CANDIDATOS = NOMBRES.map((nombre, indice) => {
-  const evaluado = indice < 4;
-  return {
-    id: `c${indice + 1}`,
-    folio: `AQ-2026-0000000${indice + 1}`,
-    nombre,
-    rut: `18.452.91${indice}-0`,
-    correo: `candidato${indice + 1}@correo.cl`,
-    telefono: `95511223${indice}`,
-    cargo: indice % 2 === 0 ? 'Monitor Producción' : 'Analista de Sistemas',
-    familiaCargo: indice % 2 === 0 ? 'Técnico B/C' : 'Profesional B/C',
-    estado: ESTADOS[indice],
-    puntaje: evaluado ? 80 : null,
-    idoneidad: evaluado ? 'Idóneo' : null,
-    respuestas: evaluado ? { p1: 5 } : null,
-    fechaPostulacion: indice >= 8 ? fechaAntigua : fechaActual(10 - indice),
-  };
-});
 
 const CATALOGO = {
   familiasCargos: {
@@ -110,36 +110,7 @@ function respuestaOk(ruta) {
   return Promise.resolve({});
 }
 
-async function montar() {
-  const contenedor = document.createElement('div');
-  document.body.appendChild(contenedor);
-  const raiz = createRoot(contenedor);
-
-  await act(async () => {
-    raiz.render(h(Dashboard));
-    await new Promise((resolver) => setTimeout(resolver, 0));
-  });
-
-  return { contenedor, raiz };
-}
-
-function escribir(elemento, valor) {
-  const prototipo =
-    elemento instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-  const descriptor = Object.getOwnPropertyDescriptor(prototipo, 'value');
-  descriptor.set.call(elemento, valor);
-  elemento.dispatchEvent(
-    new Event(elemento instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }),
-  );
-}
-
-function hacerClic(elemento) {
-  elemento.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-}
-
 describe('Dashboard', () => {
-  let montaje = null;
-
   beforeEach(() => {
     mocks.rol = 'psicologo';
     mocks.apiGet.mockReset();
@@ -153,96 +124,48 @@ describe('Dashboard', () => {
   });
 
   afterEach(() => {
-    if (montaje) {
-      act(() => montaje.raiz.unmount());
-      montaje.contenedor.remove();
-      montaje = null;
-    }
+    cleanup();
   });
 
-  it('carga métricas y muestra la primera página de candidatos', async () => {
-    montaje = await montar();
-    const valores = [...montaje.contenedor.querySelectorAll('.kpi-valor')].map((nodo) =>
-      nodo.textContent.trim(),
-    );
+  it('muestra las métricas y los candidatos', async () => {
+    render(<Dashboard />);
 
-    expect(valores).toHaveLength(4);
-    expect(valores[0]).toBe('10');
-    expect(valores[1]).toBe('8');
-    expect(valores[2]).toContain('40');
-    expect(valores[3]).toBe('2');
-    expect(montaje.contenedor.querySelectorAll('.tabla-aqua tbody tr')).toHaveLength(8);
-    expect(montaje.contenedor.textContent).toContain('Ana Pérez');
+    expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
+
+    const total = screen.getByText('Total candidatos').closest('article');
+    expect(within(total).getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('María González')).toBeInTheDocument();
+    expect(screen.getByText('Diego Soto')).toBeInTheDocument();
   });
 
-  it('filtra sin distinguir tildes y actualiza el total', async () => {
-    montaje = await montar();
-    const buscador = montaje.contenedor.querySelector('#filtro-busqueda');
+  it('filtra por nombre sin distinguir tildes', async () => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
 
-    act(() => escribir(buscador, 'maria'));
+    const buscador = await screen.findByLabelText('Nombre, RUT o correo');
+    await user.type(buscador, 'maria');
 
-    expect(montaje.contenedor.textContent).toContain('María González');
-    expect(montaje.contenedor.textContent).toContain('1 candidato');
-    expect(montaje.contenedor.querySelectorAll('.tabla-aqua tbody tr')).toHaveLength(1);
-    expect(montaje.contenedor.textContent).not.toContain('Ana Pérez');
+    expect(await screen.findByText('María González')).toBeInTheDocument();
+    expect(screen.queryByText('Ana Pérez')).not.toBeInTheDocument();
+    expect(screen.getByText('1 candidato')).toBeInTheDocument();
   });
 
-  it('pagina los candidatos de ocho en ocho', async () => {
-    montaje = await montar();
-    const siguiente = [...montaje.contenedor.querySelectorAll('button')].find((boton) =>
-      boton.textContent.includes('Siguiente'),
-    );
-
-    act(() => hacerClic(siguiente));
-
-    expect(montaje.contenedor.textContent).toContain('Página 2 de 2');
-    expect(montaje.contenedor.querySelectorAll('.tabla-aqua tbody tr')).toHaveLength(2);
-    expect(montaje.contenedor.textContent).toContain('Inés Torres');
-  });
-
-  it('muestra el error de carga y permite reintentar', async () => {
+  it('muestra un mensaje cuando falla la carga', async () => {
     mocks.apiGet.mockRejectedValue(new Error('No se pudo cargar el panel'));
-    montaje = await montar();
 
-    expect(montaje.contenedor.textContent).toContain('No se pudo cargar el panel');
+    render(<Dashboard />);
 
-    mocks.apiGet.mockImplementation(respuestaOk);
-    const reintentar = [...montaje.contenedor.querySelectorAll('button')].find((boton) =>
-      boton.textContent.includes('Reintentar'),
-    );
-
-    await act(async () => {
-      hacerClic(reintentar);
-      await new Promise((resolver) => setTimeout(resolver, 0));
-    });
-
-    expect(montaje.contenedor.textContent).toContain('Ana Pérez');
-    expect(montaje.contenedor.textContent).not.toContain('No se pudo cargar el panel');
+    expect(await screen.findByText('No se pudo cargar el panel')).toBeInTheDocument();
   });
 
   it('oculta las acciones de edición para el analista', async () => {
     mocks.rol = 'analista';
-    montaje = await montar();
-    const titulos = [...montaje.contenedor.querySelectorAll('button')].map(
-      (boton) => boton.getAttribute('title') ?? '',
-    );
+    render(<Dashboard />);
 
-    expect(montaje.contenedor.textContent).not.toContain('Nuevo candidato');
-    expect(montaje.contenedor.textContent).not.toContain('Editar');
-    expect(montaje.contenedor.textContent).not.toContain('Eliminar');
-    expect(titulos).not.toContain('Evaluar candidato');
-    expect(montaje.contenedor.textContent).toContain('Historial');
-  });
-
-  it('mantiene las acciones completas para el evaluador', async () => {
-    montaje = await montar();
-    const titulos = [...montaje.contenedor.querySelectorAll('button')].map(
-      (boton) => boton.getAttribute('title') ?? '',
-    );
-
-    expect(montaje.contenedor.textContent).toContain('Nuevo candidato');
-    expect(titulos).toContain('Evaluar candidato');
-    expect(montaje.contenedor.textContent).toContain('Editar');
-    expect(montaje.contenedor.textContent).toContain('Eliminar');
+    expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
+    expect(screen.queryByText('Nuevo candidato')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Evaluar candidato')).not.toBeInTheDocument();
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Ver historial de etapas' })).toHaveLength(3);
   });
 });

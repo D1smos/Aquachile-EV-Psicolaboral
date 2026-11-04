@@ -16,7 +16,7 @@ El MVP se compone de una zona pública para postulantes y una zona privada para 
 * **Frontend**: React 18, Vite 5, React Router 6, Bootstrap 5 y Bootstrap Icons.
 * **Backend**: Node.js 24, Express, JWT, bcryptjs, Multer y Nodemailer.
 * **Base de datos**: SQLite local con `node:sqlite` o PostgreSQL/Supabase mediante `DATABASE_URL`.
-* **Pruebas**: `node:test` en backend y Vitest + jsdom en frontend.
+* **Pruebas**: `node:test` en backend y Vitest + Testing Library + jsdom en frontend.
 
 ## Estructura del Repositorio
 * `/frontend`: Contiene el código fuente de la aplicación cliente, componentes React, vistas, contextos y pruebas Vitest.
@@ -120,7 +120,7 @@ Las contraseñas se configuran en `backend/.env` mediante `EVALUADOR_PASSWORD` y
 
 ## Pruebas Automatizadas
 * **Backend**: pruebas de API, autenticación, permisos, postulaciones, evaluación, correo y validadores con `node:test`.
-* **Frontend**: pruebas de utilidades, validaciones y componentes con **Vitest + jsdom**. No se utiliza Karma ni Jasmine.
+* **Frontend**: pruebas de utilidades, validaciones y componentes con **Vitest + Testing Library + jsdom**. No se utiliza Karma ni Jasmine.
 * **Cobertura**: el reporte HTML del frontend se genera en `frontend/cobertura/`.
 
 Comandos:
@@ -132,7 +132,7 @@ npm run test:coverage --prefix frontend
 npm run test:cobertura --prefix backend
 ```
 
-Actualmente la suite suma **38 pruebas de backend** y **56 pruebas de frontend**, con **94 pruebas aprobadas**. La cobertura frontend es de **58,59% de líneas**, con **93,72% en utilidades**, **94,26% en Postulación** y **63,09% en Dashboard**.
+Actualmente la suite suma **38 pruebas de backend** y **52 pruebas de frontend**, con **90 pruebas aprobadas**. La cobertura frontend es de **57,85% de líneas**, con **95,04% en utilidades**, **91,83% en Postulación** y **57,74% en Dashboard**.
 
 La evidencia detallada de casos, resultados y cobertura está en [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md).
 
