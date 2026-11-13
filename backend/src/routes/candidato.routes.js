@@ -12,10 +12,13 @@ import {
   eliminar,
   evaluar,
   exportarCsv,
+  ficha,
   historial,
   informePdf,
   listar,
   obtener,
+  previsualizarArchivo,
+  urlDeArchivo,
 } from '../controllers/candidato.controller.js';
 
 export const rutasCandidatos = Router();
@@ -32,5 +35,8 @@ rutasCandidatos.patch('/:id/estado', requiereRol(ROL_EVALUADOR), actualizarEstad
 rutasCandidatos.post('/:id/evaluacion', requiereRol(ROL_EVALUADOR), evaluar);
 rutasCandidatos.post('/:id/asistente', requiereRol(ROL_EVALUADOR), asistir);
 rutasCandidatos.get('/:id/informe.pdf', informePdf);
+rutasCandidatos.get('/:id/ficha', ficha);
 rutasCandidatos.get('/:id/historial', historial);
+rutasCandidatos.get('/:id/archivos/:archivoId/url', urlDeArchivo);
+rutasCandidatos.get('/:id/archivos/:archivoId/preview', previsualizarArchivo);
 rutasCandidatos.get('/:id/archivos/:archivoId', descargarArchivo);

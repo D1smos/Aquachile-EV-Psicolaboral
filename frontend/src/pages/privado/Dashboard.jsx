@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -57,6 +58,7 @@ function ErrorCarga({ mensaje, onReintentar }) {
 export default function Dashboard() {
   const { mostrarToast } = useToast();
   const { usuario } = useAuth();
+  const navegar = useNavigate();
   const puedeEvaluar = usuario?.rol === 'psicologo';
   const [candidatos, setCandidatos] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
@@ -278,6 +280,13 @@ export default function Dashboard() {
           <button type="button" className="boton boton-secundario" onClick={descargarCsv}>
             <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" /> Exportar CSV
           </button>
+          <button
+            type="button"
+            className="boton boton-secundario"
+            onClick={() => navegar('/documentos')}
+          >
+            <i className="bi bi-folder2-open" aria-hidden="true" /> Documentos
+          </button>
           <button type="button" className="boton boton-secundario" onClick={cargar} disabled={cargando}>
             <i className="bi bi-arrow-clockwise" aria-hidden="true" /> Actualizar
           </button>
@@ -352,6 +361,7 @@ export default function Dashboard() {
               onEditar={setEditando}
               onInforme={descargarInforme}
               onEliminar={eliminarCandidato}
+              onFicha={(candidato) => navegar(`/candidatos/${candidato.id}/ficha`)}
               puedeEvaluar={puedeEvaluar}
             />
             {totalPaginas > 1 && (

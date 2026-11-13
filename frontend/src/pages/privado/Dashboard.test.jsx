@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dashboard from './Dashboard.jsx';
 
@@ -32,6 +33,13 @@ vi.mock('../../context/ToastContext.jsx', () => ({
 }));
 
 const fecha = new Date().toISOString();
+
+const renderDashboard = () =>
+  render(
+    <MemoryRouter>
+      <Dashboard />
+    </MemoryRouter>,
+  );
 
 const CANDIDATOS = [
   {
@@ -128,7 +136,7 @@ describe('Dashboard', () => {
   });
 
   it('muestra las métricas y los candidatos', async () => {
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
 
@@ -140,7 +148,7 @@ describe('Dashboard', () => {
 
   it('filtra por nombre sin distinguir tildes', async () => {
     const user = userEvent.setup();
-    render(<Dashboard />);
+    renderDashboard();
 
     const buscador = await screen.findByLabelText('Nombre, RUT o correo');
     await user.type(buscador, 'maria');
@@ -153,14 +161,14 @@ describe('Dashboard', () => {
   it('muestra un mensaje cuando falla la carga', async () => {
     mocks.apiGet.mockRejectedValue(new Error('No se pudo cargar el panel'));
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('No se pudo cargar el panel')).toBeInTheDocument();
   });
 
   it('oculta las acciones de edición para el analista', async () => {
     mocks.rol = 'analista';
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
     expect(screen.queryByText('Nuevo candidato')).not.toBeInTheDocument();

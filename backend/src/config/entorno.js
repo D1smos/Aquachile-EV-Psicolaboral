@@ -70,4 +70,13 @@ export const entorno = Object.freeze({
     datos: aRuta(process.env.DIRECTORIO_DATOS, path.join(raizBackend, 'data')),
     frontend: path.resolve(raizBackend, '..', 'frontend', 'dist'),
   },
+  almacenamiento: {
+    proveedor: String(process.env.STORAGE_PROVIDER ?? 'local').trim().toLowerCase() || 'local',
+    bucket: String(process.env.SUPABASE_BUCKET ?? '').trim(),
+    ttl: aEntero(process.env.STORAGE_SIGNED_URL_TTL, 60),
+    supabase: {
+      url: String(process.env.SUPABASE_URL ?? '').trim(),
+      serviceRoleKey: String(process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim(),
+    },
+  },
 });

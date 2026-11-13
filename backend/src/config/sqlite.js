@@ -85,6 +85,11 @@ const ESQUEMA = `
     ruta TEXT NOT NULL,
     mimetype TEXT NOT NULL,
     tamano INTEGER NOT NULL,
+    storageKey TEXT,
+    proveedor TEXT,
+    bucket TEXT,
+    hash TEXT,
+    deletedAt TEXT,
     creadoEn TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS historial_etapas (
@@ -116,6 +121,12 @@ const obtenerBd = () => {
     }
     if (!columnas.includes('fechaConsentimiento')) {
       instancia.exec('ALTER TABLE candidatos ADD COLUMN fechaConsentimiento TEXT');
+    }
+    const columnasArchivos = instancia.prepare('PRAGMA table_info(archivos)').all().map((fila) => fila.name);
+    for (const columna of ['storageKey', 'proveedor', 'bucket', 'hash', 'deletedAt']) {
+      if (!columnasArchivos.includes(columna)) {
+        instancia.exec(`ALTER TABLE archivos ADD COLUMN ${columna} TEXT`);
+      }
     }
   }
   return instancia;
@@ -187,30 +198,86 @@ export const cerrarBaseDatos = () => {
   }
 };
 
+const COLUMNAS_ARCHIVO = [
+  'id',
+  'candidatoId',
+  'tipo',
+  'nombreOriginal',
+  'nombreAlmacenado',
+  'ruta',
+  'mimetype',
+  'tamano',
+  'storageKey',
+  'proveedor',
+  'bucket',
+  'hash',
+  'deletedAt',
+  'creadoEn',
+];
+
+const filaArchivo = (datos) => {
+  const fila = {};
+  for (const columna of COLUMNAS_ARCHIVO) {
+    if (datos[columna] !== undefined) {
+      fila[columna] = datos[columna];
+    }
+  }
+  return fila;
+};
+
 export const dbArchivos = {
-  listarPorCandidato: async (candidatoId) =>
-    obtenerBd()
-      .prepare('SELECT * FROM archivos WHERE candidatoId = ? ORDER BY creadoEn ASC')
-      .all(String(candidatoId))
-      .map((archivo) => ({ ...archivo })),
-  insertar: async (candidatoId, archivo) => {
+  listarPorCandidato: async (candidatoId, { incluirEliminados = false } = {}) =>
     obtenerBd()
       .prepare(
-        'INSERT INTO archivos (id, candidatoId, tipo, nombreOriginal, nombreAlmacenado, ruta, mimetype, tamano, creadoEn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        `SELECT * FROM archivos WHERE candidatoId = ?${incluirEliminados ? '' : ' AND deletedAt IS NULL'} ORDER BY creadoEn ASC`,
       )
-      .run(
-        archivo.id,
-        String(candidatoId),
-        archivo.tipo,
-        archivo.nombreOriginal,
-        archivo.nombreAlmacenado,
-        archivo.ruta,
-        archivo.mimetype,
-        archivo.tamano,
-        archivo.creadoEn,
-      );
-    return { ...archivo };
+      .all(String(candidatoId))
+      .map((archivo) => ({ ...archivo })),
+  buscarPorHash: async (hash) => {
+    if (!hash) {
+      return null;
+    }
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM archivos WHERE hash = ? AND deletedAt IS NULL ORDER BY creadoEn ASC LIMIT 1')
+      .get(String(hash));
+    return fila ? { ...fila } : null;
   },
+  contarPorStorageKey: async (storageKey) => {
+    if (!storageKey) {
+      return 0;
+    }
+    return Number(
+      obtenerBd()
+        .prepare('SELECT COUNT(*) AS total FROM archivos WHERE storageKey = ? AND deletedAt IS NULL')
+        .get(String(storageKey))?.total ?? 0,
+    );
+  },
+  insertar: async (candidatoId, archivo) => {
+    const fila = filaArchivo(archivo);
+    fila.candidatoId = String(candidatoId);
+    const columnas = Object.keys(fila);
+    obtenerBd()
+      .prepare(
+        `INSERT INTO archivos (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+      )
+      .run(...columnas.map((columna) => fila[columna]));
+    return { ...fila };
+  },
+  actualizar: async (id, cambios) => {
+    const fila = filaArchivo(cambios);
+    delete fila.id;
+    const columnas = Object.keys(fila);
+    if (columnas.length === 0) {
+      return null;
+    }
+    obtenerBd()
+      .prepare(`UPDATE archivos SET ${columnas.map((columna) => `${columna} = ?`).join(', ')} WHERE id = ?`)
+      .run(...columnas.map((columna) => fila[columna]), String(id));
+    const actualizado = obtenerBd().prepare('SELECT * FROM archivos WHERE id = ?').get(String(id));
+    return actualizado ? { ...actualizado } : null;
+  },
+  marcarEliminado: async (id) =>
+    dbArchivos.actualizar(id, { deletedAt: new Date().toISOString() }),
 };
 
 export const dbCandidatos = {

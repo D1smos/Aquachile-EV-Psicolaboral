@@ -52,6 +52,11 @@ Editar `backend/.env` y completar:
 | `EVALUADOR_PASSWORD` | Sí | Contraseña de la cuenta evaluadora |
 | `ANALISTA_PASSWORD` | Sí | Contraseña de la cuenta analista |
 | `DATABASE_URL` | No | Vacía = SQLite local. Con URL = PostgreSQL/Supabase |
+| `STORAGE_PROVIDER` | No | `local` (por defecto) guarda en `backend/uploads`; `supabase` usa Supabase Storage |
+| `SUPABASE_URL` | Solo con `supabase` | URL del proyecto, por ejemplo `https://xxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Solo con `supabase` | Service Role Key; nunca la anon key ni en el frontend |
+| `SUPABASE_BUCKET` | Solo con `supabase` | Bucket privado, por defecto `aquachile-documentos` |
+| `STORAGE_SIGNED_URL_TTL` | No | Segundos de validez de las URLs firmadas (60 por defecto) |
 | `SEED_DEMO` | No | `true` carga 10 candidatos de ejemplo en una base vacía |
 | `SMTP_HOST` | No | Servidor SMTP para el correo automático de aprobación |
 | `SMTP_PORT` | No | Puerto SMTP (587 por defecto) |
@@ -96,6 +101,28 @@ DATABASE_URL=postgresql://usuario:clave@host:6543/postgres
 - Usar el puerto del pooler (6543), no el directo (5432).
 - El esquema debe existir: pegar `backend/schema.sql` en el SQL Editor de Supabase.
 - Pedir la cadena por un canal privado: no se versiona.
+
+### Almacenamiento de documentos
+
+Los CV y antecedentes se guardan con un adaptador intercambiable:
+
+- **Local (por defecto)**: `STORAGE_PROVIDER=local` escribe en `backend/uploads`, igual que antes. No requiere configuración adicional.
+- **Supabase Storage**: `STORAGE_PROVIDER=supabase` usa un bucket privado y entrega URLs firmadas de corta duración. Requiere `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `SUPABASE_BUCKET`.
+
+Para habilitar Supabase Storage:
+
+1. Crear el bucket privado (por ejemplo `aquachile-documentos`) en el panel de Supabase.
+2. Completar las variables en `backend/.env` (nunca en el frontend ni en el repositorio).
+3. Migrar los archivos existentes desde `backend/uploads`:
+
+```bash
+cd backend
+npm run migrar:storage
+```
+
+El script calcula el hash SHA-256, sube los binarios, actualiza `storageKey`, `proveedor`, `bucket` y `hash`, y marca con `deletedAt` los registros cuyo archivo ya no existe en disco. Es idempotente: los registros ya migrados se omiten.
+
+La deduplicación usa el hash: si dos candidatos adjuntan el mismo archivo, se guarda una sola copia y solo se elimina del almacenamiento cuando no quedan referencias activas.
 
 ### Datos de ejemplo
 

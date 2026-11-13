@@ -49,6 +49,9 @@ export default function Navbar() {
               <NavLink to="/dashboard" className="enlace-nav" onClick={cerrarMenu}>
                 Dashboard
               </NavLink>
+              <NavLink to="/documentos" className="enlace-nav" onClick={cerrarMenu}>
+                Documentos
+              </NavLink>
               <button
                 type="button"
                 className="boton boton-secundario boton-sm"

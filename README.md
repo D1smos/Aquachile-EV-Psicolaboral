@@ -16,11 +16,14 @@ El MVP se compone de una zona pública para postulantes y una zona privada para 
 * **Frontend**: React 18, Vite 5, React Router 6, Bootstrap 5 y Bootstrap Icons.
 * **Backend**: Node.js 24, Express, JWT, bcryptjs, Multer y Nodemailer.
 * **Base de datos**: SQLite local con `node:sqlite` o PostgreSQL/Supabase mediante `DATABASE_URL`.
+* **Almacenamiento**: disco local o Supabase Storage con bucket privado, URLs firmadas y deduplicación por SHA-256.
 * **Pruebas**: `node:test` en backend y Vitest + Testing Library + jsdom en frontend.
 
 ## Estructura del Repositorio
 * `/frontend`: Contiene el código fuente de la aplicación cliente, componentes React, vistas, contextos y pruebas Vitest.
 * `/backend`: Contiene la lógica del servidor, API REST, servicios, validadores y configuración de base de datos.
+  * `src/services/almacenamiento/`: adaptadores local y Supabase Storage.
+  * `src/scripts/migrar-archivos-storage.js`: migración idempotente de archivos existentes.
 * `/docs`: Contiene el ERS y la documentación de apoyo del proyecto.
 * `/scripts`: Contiene el script de verificación del entorno.
 * `SETUP.md`: Guía detallada de instalación, variables de entorno y solución de problemas.
@@ -30,6 +33,8 @@ El MVP se compone de una zona pública para postulantes y una zona privada para 
 * **Autenticación y Autorización**: Acceso seguro para reclutadores y psicólogos evaluadores mediante JWT y roles.
 * **Dashboard de Gestión**: Panel de control con métricas de candidatos, postulaciones, evaluaciones completadas y aprobados.
 * **Gestión de Candidatos**: Tabla centralizada con búsqueda, filtros, orden, paginación y estado del proceso.
+* **Ficha Técnica**: Vista propia por candidato con datos, evaluación, documentos e historial; permite imprimir, descargar PDF y compartir solo dentro del equipo interno.
+* **Sección de Documentos**: Búsqueda centralizada de CV y antecedentes por candidato, folio o archivo, con filtros, paginación y acciones de ver/descargar.
 * **Postulación Pública**: Formulario validado con carga de CV, generación de folio y aceptación de privacidad.
 * **Consulta Pública**: Seguimiento del estado de la postulación mediante folio y RUT, sin exponer datos sensibles.
 * **Evaluación Psicolaboral**: Cuestionario de 10 preguntas en 4 dimensiones, cálculo de puntaje e idoneidad.
@@ -132,7 +137,7 @@ npm run test:coverage --prefix frontend
 npm run test:cobertura --prefix backend
 ```
 
-Actualmente la suite suma **38 pruebas de backend** y **52 pruebas de frontend**, con **90 pruebas aprobadas**. La cobertura frontend es de **57,85% de líneas**, con **95,04% en utilidades**, **91,83% en Postulación** y **57,74% en Dashboard**.
+Actualmente la suite suma **39 pruebas de backend** y **52 pruebas de frontend**, con **91 pruebas aprobadas**. La cobertura frontend es de **57,85% de líneas**, con **95,04% en utilidades**, **91,83% en Postulación** y **57,74% en Dashboard**.
 
 La evidencia detallada de casos, resultados y cobertura está en [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md).
 
@@ -161,9 +166,8 @@ La evidencia detallada de casos, resultados y cobertura está en [`docs/Evidenci
 * [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md): casos, resultados y cobertura.
 
 ## Estado del Proyecto
-La EP2 entrega el frontend React integrado con backend, autenticación, persistencia dual y pruebas automatizadas. Quedan para la etapa final:
+La EP2 entrega el frontend React integrado con backend, autenticación, persistencia dual, almacenamiento local o Supabase Storage y pruebas automatizadas. Quedan para la etapa final:
 
 * Despliegue público en producción.
-* Migración de archivos a Supabase Storage.
 * Ampliación de pruebas sobre modales y pantallas secundarias.
 * Mejoras de accesibilidad y observabilidad.

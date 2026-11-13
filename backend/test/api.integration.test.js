@@ -10,6 +10,7 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'secreto-integracion-aquachile';
 process.env.DATABASE_URL = '';
 process.env.SEED_DEMO = 'false';
+process.env.STORAGE_PROVIDER = 'local';
 process.env.DIRECTORIO_DATOS = path.join(directorioPrueba, 'data');
 process.env.DIRECTORIO_UPLOADS = path.join(directorioPrueba, 'uploads');
 process.env.EVALUADOR_EMAIL = 'evaluador@prueba.cl';
@@ -217,4 +218,40 @@ test('una postulación pública aparece en el panel del evaluador', async () => 
   );
   assert.equal(descarga.status, 200);
   assert.equal(await descarga.text(), '%PDF-1.4 postulación de prueba');
+});
+
+test('la ficha y la sección de documentos están disponibles para usuarios internos', async () => {
+  const token = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
+  const { datos: listado } = await peticion('GET', '/candidatos', { token });
+  const registro = listado.candidatos.find((candidatoListado) => candidatoListado.archivos.length > 0);
+  assert.ok(registro, 'Debe existir un candidato con archivos');
+
+  const ficha = await peticion('GET', `/candidatos/${registro.id}/ficha`, { token });
+  assert.equal(ficha.respuesta.status, 200);
+  assert.equal(ficha.datos.candidato.id, registro.id);
+  assert.ok(Array.isArray(ficha.datos.historial));
+
+  const documentos = await peticion('GET', '/archivos?tipo=cv&porPagina=5', { token });
+  assert.equal(documentos.respuesta.status, 200);
+  assert.ok(documentos.datos.total >= 1);
+  assert.ok(documentos.datos.archivos.every((archivo) => archivo.tipo === 'cv'));
+  assert.ok(documentos.datos.archivos.every((archivo) => archivo.folio));
+
+  const archivo = registro.archivos[0];
+  const info = await peticion(
+    'GET',
+    `/candidatos/${registro.id}/archivos/${archivo.id}/url`,
+    { token },
+  );
+  assert.equal(info.respuesta.status, 200);
+  assert.equal(info.datos.local, true);
+  assert.equal(info.datos.url, null);
+  assert.match(info.datos.previewUrl, /\/preview$/);
+
+  const preview = await fetch(
+    `${baseUrl}/candidatos/${registro.id}/archivos/${archivo.id}/preview`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  assert.equal(preview.status, 200);
+  assert.match(preview.headers.get('content-disposition'), /^inline/);
 });

@@ -18,7 +18,7 @@ function Vacio({ hayFiltros, onLimpiar }) {
   );
 }
 
-export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onEvaluar, onHistorial, onEditar, onInforme, onEliminar, puedeEvaluar }) {
+export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onEvaluar, onHistorial, onEditar, onInforme, onEliminar, onFicha, puedeEvaluar }) {
   const [confirmando, setConfirmando] = useState(null);
   const temporizador = useRef(null);
 
@@ -126,6 +126,18 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
                       >
                         <i className="bi bi-pencil" aria-hidden="true" />
                         <span className="accion-etiqueta">Editar</span>
+                      </button>
+                    )}
+                    {onFicha && (
+                      <button
+                        type="button"
+                        className="boton boton-secundario boton-sm boton-accion"
+                        onClick={() => onFicha(candidato)}
+                        title="Abrir ficha técnica en ventana propia"
+                        aria-label="Abrir ficha técnica"
+                      >
+                        <i className="bi bi-person-vcard" aria-hidden="true" />
+                        <span className="accion-etiqueta">Ficha</span>
                       </button>
                     )}
                     <button

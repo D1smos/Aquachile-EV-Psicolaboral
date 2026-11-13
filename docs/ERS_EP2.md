@@ -41,7 +41,6 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 ### 2.2 Fuera del alcance de esta entrega
 
 - Despliegue público en producción; corresponde al Hito 3.
-- Migración de archivos binarios a Supabase Storage.
 - Firma digital de documentos.
 - Integración con portales externos de empleo.
 - Aplicación móvil nativa.
@@ -93,9 +92,9 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 | RF-09 | El panel debe mostrar métricas del proceso. | Se muestran total de candidatos, postulaciones del mes, evaluaciones completadas y aprobados. |
 | RF-10 | El panel debe permitir buscar, filtrar y ordenar. | Se filtra por texto, cargo, estado y rango de fechas; se ordena por fecha, nombre o puntaje. |
 | RF-11 | El panel debe paginar el listado. | Se muestran 8 candidatos por página con navegación anterior/siguiente. |
-| RF-12 | El listado debe incluir los documentos adjuntos. | Cada candidato del listado incluye sus archivos y permite visualizar o descargar el CV. |
+| RF-12 | El listado debe incluir los documentos adjuntos. | Cada candidato del listado incluye sus archivos y permite visualizar o descargar el CV; la descarga usa URLs firmadas cuando el almacenamiento es Supabase. |
 | RF-13 | El evaluador debe poder registrar y editar candidatos. | Los datos se validan en frontend y backend; la edición queda registrada en el historial. |
-| RF-14 | El evaluador debe poder eliminar candidatos. | La eliminación confirma la acción, borra la ficha, sus archivos físicos y su historial. |
+| RF-14 | El evaluador debe poder eliminar candidatos. | La eliminación confirma la acción, borra la ficha, sus archivos (respetando deduplicación por hash) y su historial. |
 | RF-15 | El evaluador debe poder cambiar el estado del proceso. | Se permiten los estados Pendiente, En Proceso, Aprobado y Rechazado, con registro en historial. |
 | RF-16 | El evaluador debe poder aplicar el cuestionario psicolaboral. | Se responden 10 preguntas en escala 1 a 5; el sistema calcula puntaje, dimensiones e idoneidad. |
 | RF-17 | El sistema debe clasificar la idoneidad. | Se aplican umbrales de puntaje y dimensiones críticas para obtener Idóneo, Idóneo con observaciones o No idóneo. |
@@ -103,6 +102,8 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 | RF-19 | El sistema debe mantener historial por candidato. | Cada cambio registra etapa anterior, etapa nueva, responsable, motivo y fecha. |
 | RF-20 | El sistema debe exportar reportes. | Se genera CSV respetando filtros y una ficha PDF por candidato. |
 | RF-21 | El sistema debe notificar por correo cuando corresponde. | La aprobación y la confirmación de postulación usan plantillas con datos escapados y sin exponer secretos. |
+| RF-22 | El sistema debe ofrecer una ficha técnica en ventana propia. | Ruta `/candidatos/:id/ficha` con datos, evaluación, documentos e historial; incluye imprimir, descargar PDF y compartir solo entre usuarios internos. |
+| RF-23 | El sistema debe centralizar la consulta de documentos. | Ruta `/documentos` con búsqueda por candidato, folio o archivo, filtro por tipo y rango de fechas, paginación y acciones de ver/descargar. |
 
 ## 5. Requisitos no funcionales
 
@@ -114,12 +115,14 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 | RNF-04 | Protección de datos personales. | La consulta pública devuelve datos mínimos; la política de privacidad informa responsable, conservación y apoyo automatizado. |
 | RNF-05 | Validación en dos capas. | Frontend y backend validan RUT, teléfono, correo, catálogos, archivos y respuestas. |
 | RNF-06 | Persistencia configurable. | SQLite local o PostgreSQL/Supabase mediante `DATABASE_URL`, sin cambiar la lógica de negocio. |
-| RNF-07 | Mantenibilidad. | Separación en rutas, controladores, servicios, validadores, config y dominio. |
-| RNF-08 | Observabilidad básica. | Registro de eventos y errores con logger propio. |
-| RNF-09 | Accesibilidad. | Etiquetas, focos visibles, atributos ARIA, navegación por teclado y respeto a movimiento reducido. |
-| RNF-10 | Pruebas automatizadas. | 38 pruebas de backend con `node:test` y 52 pruebas de frontend con Vitest. |
-| RNF-11 | Documentación de ejecución. | `SETUP.md` describe instalación, variables de entorno y solución de problemas. |
-| RNF-12 | Datos de demostración ficticios. | El seed usa nombres, RUT y correos de ejemplo; no contiene datos personales reales. |
+| RNF-07 | Almacenamiento configurable de documentos. | `STORAGE_PROVIDER=local` guarda en `backend/uploads`; `supabase` usa un bucket privado con URLs firmadas de `STORAGE_SIGNED_URL_TTL` segundos. |
+| RNF-08 | Integridad y deduplicación de archivos. | Cada archivo se identifica por SHA-256 (`storageKey` con formato `documentos/{tipo}/{hash}{ext}`) y se elimina solo cuando no quedan referencias activas. |
+| RNF-09 | Mantenibilidad. | Separación en rutas, controladores, servicios, validadores, config y dominio. |
+| RNF-10 | Observabilidad básica. | Registro de eventos y errores con logger propio. |
+| RNF-11 | Accesibilidad. | Etiquetas, focos visibles, atributos ARIA, navegación por teclado y respeto a movimiento reducido. |
+| RNF-12 | Pruebas automatizadas. | 39 pruebas de backend con `node:test` y 52 pruebas de frontend con Vitest. |
+| RNF-13 | Documentación de ejecución. | `SETUP.md` describe instalación, variables de entorno, almacenamiento y solución de problemas. |
+| RNF-14 | Datos de demostración ficticios. | El seed usa nombres, RUT y correos de ejemplo; no contiene datos personales reales. |
 
 ## 6. Arquitectura
 
@@ -127,7 +130,7 @@ El sistema digitaliza el flujo de postulación pública y la gestión interna de
 Navegador
   └── React 18 + Vite + React Router + Bootstrap 5
         ├── Vistas públicas: Inicio, Postulación, Consulta, Privacidad, 404
-        ├── Vistas privadas: Login, Dashboard
+        ├── Vistas privadas: Login, Dashboard, FichaCandidato, Documentos
         ├── Componentes: Navbar, Sidebar, TablaCandidatos, FiltrosCandidatos,
         │   TarjetaMetrica, EstadoBadge, modales y cuestionario
         ├── Contextos: AuthContext, ToastContext
@@ -139,7 +142,7 @@ Navegador
         ├── Servicios de negocio
         ├── Validadores
         ├── SQLite local o PostgreSQL/Supabase
-        └── Archivos en backend/uploads (metadatos en tabla archivos)
+        └── Archivos locales o Supabase Storage (metadatos en tabla archivos)
 ```
 
 ## 7. Modelo de datos
@@ -148,10 +151,10 @@ Navegador
 |---|---|---|---|
 | `usuarios` | `id` | Nombre, correo único, hash de contraseña y rol. | Un usuario puede evaluar muchos candidatos. |
 | `candidatos` | `id` | Folio único, datos personales, cargo, estado, respuestas, puntaje, idoneidad, IA y fechas. | Tiene muchos archivos y muchos eventos. |
-| `archivos` | `id` | Tipo (`cv` o `antecedentes`), nombres, ruta, mimetype, tamaño y fecha. | Pertenece a un candidato. |
+| `archivos` | `id` | Tipo (`cv` o `antecedentes`), nombres, ruta, `storageKey`, `proveedor`, `bucket`, `hash` SHA-256, `deletedAt`, mimetype, tamaño y fecha. | Pertenece a un candidato. |
 | `historial_etapas` | `id` | Etapa anterior, etapa nueva, responsable, motivo y fecha. | Pertenece a un candidato. |
 
-Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivos`. Esta entrega no usa Supabase Storage.
+Los binarios se guardan en `backend/uploads` cuando `STORAGE_PROVIDER=local` o en un bucket privado de Supabase Storage cuando `STORAGE_PROVIDER=supabase`. En ambos casos los metadatos viven en la tabla `archivos`; el hash SHA-256 permite deduplicar y el borrado solo elimina el binario si no quedan referencias activas.
 
 ## 8. API principal
 
@@ -174,16 +177,20 @@ Los archivos binarios se almacenan en disco y sus metadatos en la tabla `archivo
 | POST | `/api/candidatos/:id/evaluacion` | Evaluador | Registrar evaluación. |
 | POST | `/api/candidatos/:id/asistente` | Evaluador | Generar apoyo automático. |
 | GET | `/api/candidatos/:id/informe.pdf` | Autenticado | Descargar ficha PDF. |
+| GET | `/api/candidatos/:id/ficha` | Autenticado | Obtener ficha técnica con historial. |
 | GET | `/api/candidatos/:id/historial` | Autenticado | Obtener historial. |
 | GET | `/api/candidatos/:id/archivos/:archivoId` | Autenticado | Descargar archivo. |
+| GET | `/api/candidatos/:id/archivos/:archivoId/preview` | Autenticado | Previsualizar archivo. |
+| GET | `/api/candidatos/:id/archivos/:archivoId/url` | Autenticado | Obtener URL firmada o indicar modo local. |
+| GET | `/api/archivos` | Autenticado | Listar documentos con filtros y paginación. |
 
 ## 9. Estrategia de pruebas
 
 ### 9.1 Backend
 
 - Herramienta: `node:test` con `node:assert/strict`.
-- Total: 38 pruebas.
-- Cobertura funcional: autenticación, permisos, postulación, consulta pública, duplicados, evaluación, asistente, correo, validadores, datos ficticios del seed y descarga de CV.
+- Total: 39 pruebas.
+- Cobertura funcional: autenticación, permisos, postulación, consulta pública, duplicados, evaluación, asistente, correo, validadores, datos ficticios del seed, descarga de CV, ficha técnica y listado de documentos.
 - Comando: `npm test --prefix backend`.
 - Cobertura: `npm run test:cobertura --prefix backend`.
 

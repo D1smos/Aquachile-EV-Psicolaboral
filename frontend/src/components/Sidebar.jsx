@@ -114,6 +114,10 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       </nav>
 
       <div className="menu-secundario">
+        <Link to="/documentos" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+          <i className="bi bi-folder2-open" aria-hidden="true" />
+          <span>Documentos</span>
+        </Link>
         <Link to="/" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
           <i className="bi bi-globe2" aria-hidden="true" />
           <span>Sitio público</span>

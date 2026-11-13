@@ -81,6 +81,11 @@ const ESQUEMA = `
     ruta TEXT NOT NULL,
     mimetype TEXT NOT NULL,
     tamano INTEGER NOT NULL,
+    storageKey TEXT,
+    proveedor TEXT,
+    bucket TEXT,
+    hash TEXT,
+    deletedAt TEXT,
     creadoEn TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS historial_etapas (
@@ -109,6 +114,8 @@ const MAPA_COLUMNAS = Object.fromEntries(
     'candidatoId',
     'etapaAnterior',
     'etapaNueva',
+    'storageKey',
+    'deletedAt',
   ].map((columna) => [columna.toLowerCase(), columna]),
 );
 
@@ -139,6 +146,9 @@ const asegurarEsquema = async () => {
     await obtenerPool().query(
       'ALTER TABLE candidatos ADD COLUMN IF NOT EXISTS fechaConsentimiento TEXT',
     );
+    for (const columna of ['storageKey', 'proveedor', 'bucket', 'hash', 'deletedAt']) {
+      await obtenerPool().query(`ALTER TABLE archivos ADD COLUMN IF NOT EXISTS ${columna} TEXT`);
+    }
     esquemaListo = true;
   }
 };
@@ -209,33 +219,64 @@ export const dbUsuarios = {
   },
 };
 
+const normalizarArchivo = (fila) => normalizarFila({ ...fila, tamano: Number(fila.tamano) });
+
 export const dbArchivos = {
-  listarPorCandidato: async (candidatoId) => {
+  listarPorCandidato: async (candidatoId, { incluirEliminados = false } = {}) => {
     await asegurarEsquema();
     const resultado = await obtenerPool().query(
-      'SELECT * FROM archivos WHERE candidatoId = $1 ORDER BY creadoEn ASC',
+      `SELECT * FROM archivos WHERE candidatoId = $1${incluirEliminados ? '' : ' AND deletedAt IS NULL'} ORDER BY creadoEn ASC`,
       [String(candidatoId)],
     );
-    return resultado.rows.map((archivo) => normalizarFila({ ...archivo, tamano: Number(archivo.tamano) }));
+    return resultado.rows.map(normalizarArchivo);
+  },
+  buscarPorHash: async (hash) => {
+    if (!hash) {
+      return null;
+    }
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query(
+      'SELECT * FROM archivos WHERE hash = $1 AND deletedAt IS NULL ORDER BY creadoEn ASC LIMIT 1',
+      [String(hash)],
+    );
+    return resultado.rows[0] ? normalizarArchivo(resultado.rows[0]) : null;
+  },
+  contarPorStorageKey: async (storageKey) => {
+    if (!storageKey) {
+      return 0;
+    }
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query(
+      'SELECT COUNT(*) AS total FROM archivos WHERE storageKey = $1 AND deletedAt IS NULL',
+      [String(storageKey)],
+    );
+    return Number(resultado.rows[0]?.total ?? 0);
   },
   insertar: async (candidatoId, archivo) => {
     await asegurarEsquema();
+    const fila = { ...archivo, candidatoId: String(candidatoId) };
+    const columnas = Object.keys(fila);
     await obtenerPool().query(
-      'INSERT INTO archivos (id, candidatoId, tipo, nombreOriginal, nombreAlmacenado, ruta, mimetype, tamano, creadoEn) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [
-        archivo.id,
-        String(candidatoId),
-        archivo.tipo,
-        archivo.nombreOriginal,
-        archivo.nombreAlmacenado,
-        archivo.ruta,
-        archivo.mimetype,
-        archivo.tamano,
-        archivo.creadoEn,
-      ],
+      `INSERT INTO archivos (${columnas.join(', ')}) VALUES (${columnas.map((_, indice) => `$${indice + 1}`).join(', ')})`,
+      columnas.map((columna) => fila[columna]),
     );
-    return { ...archivo };
+    return { ...fila };
   },
+  actualizar: async (id, cambios) => {
+    await asegurarEsquema();
+    const columnas = Object.keys(cambios);
+    if (columnas.length === 0) {
+      return null;
+    }
+    await obtenerPool().query(
+      `UPDATE archivos SET ${columnas.map((columna, indice) => `${columna} = $${indice + 1}`).join(', ')} WHERE id = $${columnas.length + 1}`,
+      [...columnas.map((columna) => cambios[columna]), String(id)],
+    );
+    const resultado = await obtenerPool().query('SELECT * FROM archivos WHERE id = $1', [String(id)]);
+    return resultado.rows[0] ? normalizarArchivo(resultado.rows[0]) : null;
+  },
+  marcarEliminado: async (id) =>
+    dbArchivos.actualizar(id, { deletedAt: new Date().toISOString() }),
 };
 
 export const dbCandidatos = {

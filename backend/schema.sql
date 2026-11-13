@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS archivos (
   ruta TEXT NOT NULL,
   mimetype TEXT NOT NULL,
   tamano INTEGER NOT NULL,
+  storageKey TEXT,
+  proveedor TEXT,
+  bucket TEXT,
+  hash TEXT,
+  deletedAt TEXT,
   creadoEn TEXT NOT NULL
 );
 

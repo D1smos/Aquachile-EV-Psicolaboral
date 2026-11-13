@@ -87,4 +87,29 @@ export const api = {
     enlace.remove();
     URL.revokeObjectURL(url);
   },
+  blob: async (ruta) => {
+    let respuesta;
+    try {
+      respuesta = await fetch(construirUrl(ruta), { headers: encabezados() });
+    } catch {
+      throw new Error('No se pudo conectar con el servidor para abrir el archivo.');
+    }
+
+    if (!respuesta.ok) {
+      const datos = await interpretar(respuesta);
+      throw lanzarError(respuesta, datos);
+    }
+
+    return respuesta.blob();
+  },
+  abrir: async (ruta) => {
+    const blob = await api.blob(ruta);
+    const url = URL.createObjectURL(blob);
+    const ventana = window.open(url, '_blank', 'noopener');
+    if (!ventana) {
+      URL.revokeObjectURL(url);
+      throw new Error('El navegador bloqueó la ventana emergente. Permite las ventanas emergentes e inténtalo de nuevo.');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  },
 };

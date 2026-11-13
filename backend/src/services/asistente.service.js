@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { dbCandidatos } from '../config/baseDatos.js';
 import { TIPOS_ARCHIVO } from '../domain/constantes.js';
-import { localizarArchivo, obtenerCandidato } from './candidato.service.js';
+import { obtenerCandidato, rutaLocalArchivo } from './candidato.service.js';
+import { almacenamiento } from './almacenamiento/index.js';
 
 const MAX_CARACTERES = 4000;
 
@@ -21,10 +22,11 @@ const normalizar = (texto) =>
 const palabrasClave = (texto) =>
   [...new Set(normalizar(texto).split(/[^a-z0-9]+/).filter((palabra) => palabra.length > 3 && !VACIAS.has(palabra)))];
 
-const extraerPdf = async (ruta) => {
+const extraerPdf = async ({ ruta, buffer }) => {
   try {
     const { PDFParse } = await import('pdf-parse');
-    const parser = new PDFParse({ data: await readFile(ruta) });
+    const datos = buffer ?? (await readFile(ruta));
+    const parser = new PDFParse({ data: datos });
     let texto = null;
     try {
       const resultado = await parser.getText();
@@ -38,14 +40,23 @@ const extraerPdf = async (ruta) => {
   }
 };
 
-const extraerDocx = async (ruta) => {
+const extraerDocx = async ({ ruta, buffer }) => {
   try {
     const { default: mammoth } = await import('mammoth');
-    const resultado = await mammoth.extractRawText({ path: ruta });
+    const resultado = buffer
+      ? await mammoth.extractRawText({ buffer })
+      : await mammoth.extractRawText({ path: ruta });
     return typeof resultado?.value === 'string' ? resultado.value.slice(0, MAX_CARACTERES) : null;
   } catch {
     return null;
   }
+};
+
+const fuenteCv = async (cv) => {
+  if (cv.storageKey && almacenamiento.proveedor === 'supabase') {
+    return { buffer: await almacenamiento.leer(cv.storageKey) };
+  }
+  return { ruta: rutaLocalArchivo(cv) };
 };
 
 const extraerTextoCv = async (candidato) => {
@@ -54,13 +65,13 @@ const extraerTextoCv = async (candidato) => {
     return null;
   }
   try {
-    const { rutaAbsoluta } = localizarArchivo(candidato, cv.id);
+    const fuente = await fuenteCv(cv);
     const extension = path.extname(cv.nombreOriginal).toLowerCase();
     if (extension === '.pdf') {
-      return await extraerPdf(rutaAbsoluta);
+      return await extraerPdf(fuente);
     }
     if (extension === '.docx') {
-      return await extraerDocx(rutaAbsoluta);
+      return await extraerDocx(fuente);
     }
     return null;
   } catch {
