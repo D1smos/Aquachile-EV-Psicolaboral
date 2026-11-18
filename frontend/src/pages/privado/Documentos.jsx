@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import ModalTextoDocumento from '../../components/ModalTextoDocumento.jsx';
 import { formatearFecha } from '../../utils/evaluacionUtils.js';
 
 const POR_PAGINA = 15;
@@ -27,12 +29,15 @@ const formatearTamano = (bytes) => {
 };
 
 export default function Documentos() {
+  const { usuario } = useAuth();
   const { mostrarToast } = useToast();
+  const puedeEvaluar = usuario?.rol === 'psicologo';
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(1);
   const [datos, setDatos] = useState({ archivos: [], total: 0, porPagina: POR_PAGINA });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [archivoTexto, setArchivoTexto] = useState(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -267,6 +272,16 @@ export default function Documentos() {
                           <button
                             type="button"
                             className="boton boton-secundario boton-sm boton-accion"
+                            onClick={() => setArchivoTexto(archivo)}
+                            title="Ver texto extraído"
+                            aria-label="Ver texto extraído"
+                          >
+                            <i className="bi bi-file-text" aria-hidden="true" />
+                            <span className="accion-etiqueta">Texto</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="boton boton-secundario boton-sm boton-accion"
                             onClick={() => abrirArchivo(archivo, 'preview')}
                           >
                             <i className="bi bi-eye" aria-hidden="true" />
@@ -312,6 +327,16 @@ export default function Documentos() {
             </nav>
           )}
         </section>
+      )}
+
+      {archivoTexto && (
+        <ModalTextoDocumento
+          candidatoId={archivoTexto.candidatoId}
+          archivo={archivoTexto}
+          puedeEvaluar={puedeEvaluar}
+          onCerrar={() => setArchivoTexto(null)}
+          onReprocesado={cargar}
+        />
       )}
     </div>
   );

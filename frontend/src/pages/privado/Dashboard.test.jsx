@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -106,7 +106,7 @@ const CUESTIONARIO = {
 };
 
 function respuestaOk(ruta) {
-  if (ruta === '/candidatos') {
+  if (ruta.startsWith('/candidatos')) {
     return Promise.resolve({ candidatos: CANDIDATOS });
   }
   if (ruta === '/catalogos') {
@@ -156,6 +156,26 @@ describe('Dashboard', () => {
     expect(await screen.findByText('María González')).toBeInTheDocument();
     expect(screen.queryByText('Ana Pérez')).not.toBeInTheDocument();
     expect(screen.getByText('1 candidato')).toBeInTheDocument();
+  });
+
+  it('envía los filtros de experiencia y palabras clave al servidor', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await screen.findByText('Ana Pérez');
+    await user.type(screen.getByLabelText('Años de experiencia mínimos'), '3');
+
+    await waitFor(() =>
+      expect(mocks.apiGet).toHaveBeenCalledWith('/candidatos?minExperiencia=3'),
+    );
+
+    await user.type(screen.getByLabelText('Palabras clave (separadas por coma)'), 'python');
+
+    await waitFor(() =>
+      expect(mocks.apiGet).toHaveBeenCalledWith(
+        '/candidatos?minExperiencia=3&palabrasClave=python',
+      ),
+    );
   });
 
   it('muestra un mensaje cuando falla la carga', async () => {

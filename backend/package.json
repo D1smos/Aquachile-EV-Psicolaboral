@@ -13,7 +13,8 @@
     "test": "node --test",
     "test:cobertura": "c8 --reporter=text --reporter=html --reporter=lcov --reports-dir=./cobertura node --test",
     "demo:reset": "node src/scripts/resetDemo.js",
-    "migrar:storage": "node src/scripts/migrar-archivos-storage.js"
+    "migrar:storage": "node src/scripts/migrar-archivos-storage.js",
+    "smoke:ia-correo": "node src/scripts/smoke-ia-correo.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

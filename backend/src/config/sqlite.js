@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { entorno } from './entorno.js';
+import { normalizarComparacion, parsearPalabrasClave } from '../utils/texto.js';
 
 const NOMBRE_BD = 'aquachile.db';
 
@@ -101,8 +102,73 @@ const ESQUEMA = `
     motivo TEXT,
     creadoEn TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS documento_textos (
+    archivoId TEXT PRIMARY KEY REFERENCES archivos(id) ON DELETE CASCADE,
+    texto TEXT,
+    textoHash TEXT,
+    paginas INTEGER,
+    caracteres INTEGER NOT NULL DEFAULT 0,
+    anosExperiencia INTEGER NOT NULL DEFAULT 0,
+    palabrasClave TEXT NOT NULL DEFAULT '[]',
+    estado TEXT NOT NULL,
+    modeloExtraccion TEXT,
+    error TEXT,
+    extraidoEn TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS analisis_ia (
+    id TEXT PRIMARY KEY,
+    candidatoId TEXT NOT NULL REFERENCES candidatos(id) ON DELETE CASCADE,
+    archivoId TEXT REFERENCES archivos(id) ON DELETE SET NULL,
+    textoHash TEXT NOT NULL,
+    cargo TEXT NOT NULL,
+    promptVersion TEXT NOT NULL,
+    modelo TEXT NOT NULL,
+    resultado TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'borrador',
+    generadoPor TEXT,
+    revisadoPor TEXT,
+    tokensEntrada INTEGER NOT NULL DEFAULT 0,
+    tokensSalida INTEGER NOT NULL DEFAULT 0,
+    creadoEn TEXT NOT NULL,
+    actualizadoEn TEXT NOT NULL,
+    UNIQUE(candidatoId, textoHash, cargo, promptVersion, modelo)
+  );
+
+  CREATE TABLE IF NOT EXISTS entrevistas (
+    id TEXT PRIMARY KEY,
+    candidatoId TEXT NOT NULL REFERENCES candidatos(id) ON DELETE CASCADE,
+    evaluadorEmail TEXT NOT NULL,
+    titulo TEXT NOT NULL,
+    fechaInicio TEXT NOT NULL,
+    fechaFin TEXT NOT NULL,
+    timezone TEXT NOT NULL DEFAULT 'America/Santiago',
+    lugar TEXT,
+    notas TEXT,
+    estado TEXT NOT NULL DEFAULT 'programada',
+    estadoSync TEXT NOT NULL DEFAULT 'pendiente',
+    googleEventId TEXT,
+    meetUrl TEXT,
+    errorSync TEXT,
+    creadoEn TEXT NOT NULL,
+    actualizadoEn TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS google_credenciales (
+    id TEXT PRIMARY KEY,
+    usuarioEmail TEXT NOT NULL UNIQUE,
+    refreshTokenCifrado TEXT NOT NULL,
+    scope TEXT,
+    tokenType TEXT,
+    creadoEn TEXT NOT NULL,
+    actualizadoEn TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_archivos_candidato ON archivos(candidatoId);
   CREATE INDEX IF NOT EXISTS idx_historial_candidato ON historial_etapas(candidatoId, creadoEn);
+  CREATE INDEX IF NOT EXISTS idx_documento_textos_hash ON documento_textos(textoHash);
+  CREATE INDEX IF NOT EXISTS idx_analisis_ia_candidato ON analisis_ia(candidatoId, creadoEn);
+  CREATE INDEX IF NOT EXISTS idx_entrevistas_fecha ON entrevistas(fechaInicio, fechaFin);
+  CREATE INDEX IF NOT EXISTS idx_entrevistas_candidato ON entrevistas(candidatoId, fechaInicio);
+  CREATE INDEX IF NOT EXISTS idx_google_credenciales_usuario ON google_credenciales(usuarioEmail);
 `;
 
 const rutaBd = () => path.join(entorno.directorios.datos, NOMBRE_BD);
@@ -127,6 +193,13 @@ const obtenerBd = () => {
       if (!columnasArchivos.includes(columna)) {
         instancia.exec(`ALTER TABLE archivos ADD COLUMN ${columna} TEXT`);
       }
+    }
+    const columnasDocumentos = instancia.prepare('PRAGMA table_info(documento_textos)').all().map((fila) => fila.name);
+    if (!columnasDocumentos.includes('anosExperiencia')) {
+      instancia.exec('ALTER TABLE documento_textos ADD COLUMN anosExperiencia INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!columnasDocumentos.includes('palabrasClave')) {
+      instancia.exec("ALTER TABLE documento_textos ADD COLUMN palabrasClave TEXT NOT NULL DEFAULT '[]'");
     }
   }
   return instancia;
@@ -276,22 +349,413 @@ export const dbArchivos = {
     const actualizado = obtenerBd().prepare('SELECT * FROM archivos WHERE id = ?').get(String(id));
     return actualizado ? { ...actualizado } : null;
   },
+  obtenerPorId: async (id) => {
+    const fila = obtenerBd().prepare('SELECT * FROM archivos WHERE id = ?').get(String(id));
+    return fila ? { ...fila } : null;
+  },
+  eliminar: async (id) =>
+    obtenerBd().prepare('DELETE FROM archivos WHERE id = ?').run(String(id)).changes > 0,
   marcarEliminado: async (id) =>
     dbArchivos.actualizar(id, { deletedAt: new Date().toISOString() }),
+};
+
+const normalizarDocumentoTexto = (fila) => ({
+  ...fila,
+  paginas: fila.paginas === null ? null : Number(fila.paginas),
+  caracteres: Number(fila.caracteres ?? 0),
+  anosExperiencia: Number(fila.anosExperiencia ?? 0),
+  palabrasClave: parsearPalabrasClave(fila.palabrasClave),
+});
+
+export const dbDocumentosTexto = {
+  obtenerPorArchivo: async (archivoId) => {
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM documento_textos WHERE archivoId = ?')
+      .get(String(archivoId));
+    return fila ? normalizarDocumentoTexto(fila) : null;
+  },
+  listarPorCandidato: async (candidatoId) =>
+    obtenerBd()
+      .prepare(
+        `SELECT dt.* FROM documento_textos dt
+         JOIN archivos a ON a.id = dt.archivoId
+         WHERE a.candidatoId = ? AND a.deletedAt IS NULL
+         ORDER BY a.creadoEn ASC`,
+      )
+      .all(String(candidatoId))
+      .map(normalizarDocumentoTexto),
+  coincide: async (candidatoId, { minExperiencia = 0, palabrasClave = [] } = {}) => {
+    const minimo = Number(minExperiencia) || 0;
+    const claves = parsearPalabrasClave(palabrasClave)
+      .map((palabra) => normalizarComparacion(palabra))
+      .filter(Boolean);
+    const filas = obtenerBd()
+      .prepare(
+        `SELECT dt.anosExperiencia, dt.palabrasClave, dt.texto
+         FROM documento_textos dt
+         JOIN archivos a ON a.id = dt.archivoId
+         WHERE a.candidatoId = ? AND a.deletedAt IS NULL AND a.tipo = 'cv'`,
+      )
+      .all(String(candidatoId));
+    return filas.some((fila) => {
+      if (minimo > 0 && Number(fila.anosExperiencia ?? 0) < minimo) {
+        return false;
+      }
+      if (claves.length === 0) {
+        return true;
+      }
+      const contenido = normalizarComparacion(`${fila.palabrasClave ?? ''} ${fila.texto ?? ''}`);
+      return claves.every((clave) => contenido.includes(clave));
+    });
+  },
+  guardar: async (documento) => {
+    const fila = {
+      archivoId: String(documento.archivoId),
+      texto: documento.texto ?? null,
+      textoHash: documento.textoHash ? String(documento.textoHash) : null,
+      paginas: documento.paginas ?? null,
+      caracteres: Number(documento.caracteres ?? 0),
+      anosExperiencia: Number(documento.anosExperiencia ?? 0),
+      palabrasClave: JSON.stringify(parsearPalabrasClave(documento.palabrasClave)),
+      estado: String(documento.estado),
+      modeloExtraccion: documento.modeloExtraccion ?? null,
+      error: documento.error ?? null,
+      extraidoEn: documento.extraidoEn ?? new Date().toISOString(),
+    };
+    obtenerBd()
+      .prepare(
+        `INSERT INTO documento_textos
+          (archivoId, texto, textoHash, paginas, caracteres, anosExperiencia, palabrasClave, estado, modeloExtraccion, error, extraidoEn)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(archivoId) DO UPDATE SET
+           texto = excluded.texto,
+           textoHash = excluded.textoHash,
+           paginas = excluded.paginas,
+           caracteres = excluded.caracteres,
+           anosExperiencia = excluded.anosExperiencia,
+           palabrasClave = excluded.palabrasClave,
+           estado = excluded.estado,
+           modeloExtraccion = excluded.modeloExtraccion,
+           error = excluded.error,
+           extraidoEn = excluded.extraidoEn`,
+      )
+      .run(
+        fila.archivoId,
+        fila.texto,
+        fila.textoHash,
+        fila.paginas,
+        fila.caracteres,
+        fila.anosExperiencia,
+        fila.palabrasClave,
+        fila.estado,
+        fila.modeloExtraccion,
+        fila.error,
+        fila.extraidoEn,
+      );
+    return normalizarDocumentoTexto(fila);
+  },
+  eliminarPorArchivo: async (archivoId) =>
+    obtenerBd().prepare('DELETE FROM documento_textos WHERE archivoId = ?').run(String(archivoId))
+      .changes > 0,
+};
+
+const normalizarAnalisisIA = (fila) => ({
+  ...fila,
+  resultado: leerJson(fila.resultado, null),
+  tokensEntrada: Number(fila.tokensEntrada ?? 0),
+  tokensSalida: Number(fila.tokensSalida ?? 0),
+});
+
+const CAMPOS_ANALISIS_ACTUALIZABLES = new Set([
+  'resultado',
+  'estado',
+  'revisadoPor',
+  'tokensEntrada',
+  'tokensSalida',
+  'actualizadoEn',
+]);
+
+export const dbAnalisisIA = {
+  buscarCache: async ({ candidatoId, textoHash, cargo, promptVersion, modelo }) => {
+    const fila = obtenerBd()
+      .prepare(
+        `SELECT * FROM analisis_ia
+         WHERE candidatoId = ? AND textoHash = ? AND cargo = ?
+           AND promptVersion = ? AND modelo = ? AND estado <> 'descartado'
+         ORDER BY creadoEn DESC LIMIT 1`,
+      )
+      .get(String(candidatoId), String(textoHash), String(cargo), String(promptVersion), String(modelo));
+    return fila ? normalizarAnalisisIA(fila) : null;
+  },
+  insertar: async (analisis) => {
+    const ahora = new Date().toISOString();
+    const fila = {
+      id: analisis.id ?? crypto.randomUUID(),
+      candidatoId: String(analisis.candidatoId),
+      archivoId: analisis.archivoId ? String(analisis.archivoId) : null,
+      textoHash: String(analisis.textoHash),
+      cargo: String(analisis.cargo),
+      promptVersion: String(analisis.promptVersion),
+      modelo: String(analisis.modelo),
+      resultado:
+        typeof analisis.resultado === 'string'
+          ? analisis.resultado
+          : JSON.stringify(analisis.resultado ?? null),
+      estado: analisis.estado ?? 'borrador',
+      generadoPor: analisis.generadoPor ?? null,
+      revisadoPor: analisis.revisadoPor ?? null,
+      tokensEntrada: Number(analisis.tokensEntrada ?? 0),
+      tokensSalida: Number(analisis.tokensSalida ?? 0),
+      creadoEn: analisis.creadoEn ?? ahora,
+      actualizadoEn: analisis.actualizadoEn ?? ahora,
+    };
+    obtenerBd()
+      .prepare(
+        `INSERT INTO analisis_ia
+          (id, candidatoId, archivoId, textoHash, cargo, promptVersion, modelo, resultado, estado,
+           generadoPor, revisadoPor, tokensEntrada, tokensSalida, creadoEn, actualizadoEn)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(candidatoId, textoHash, cargo, promptVersion, modelo) DO UPDATE SET
+           archivoId = excluded.archivoId,
+           resultado = excluded.resultado,
+           estado = excluded.estado,
+           generadoPor = excluded.generadoPor,
+           revisadoPor = excluded.revisadoPor,
+           tokensEntrada = excluded.tokensEntrada,
+           tokensSalida = excluded.tokensSalida,
+           actualizadoEn = excluded.actualizadoEn`,
+      )
+      .run(
+        fila.id,
+        fila.candidatoId,
+        fila.archivoId,
+        fila.textoHash,
+        fila.cargo,
+        fila.promptVersion,
+        fila.modelo,
+        fila.resultado,
+        fila.estado,
+        fila.generadoPor,
+        fila.revisadoPor,
+        fila.tokensEntrada,
+        fila.tokensSalida,
+        fila.creadoEn,
+        fila.actualizadoEn,
+      );
+    return dbAnalisisIA.buscarCache({
+      candidatoId: fila.candidatoId,
+      textoHash: fila.textoHash,
+      cargo: fila.cargo,
+      promptVersion: fila.promptVersion,
+      modelo: fila.modelo,
+    });
+  },
+  obtenerPorId: async (id) => {
+    const fila = obtenerBd().prepare('SELECT * FROM analisis_ia WHERE id = ?').get(String(id));
+    return fila ? normalizarAnalisisIA(fila) : null;
+  },
+  ultimoPorCandidato: async (candidatoId) => {
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM analisis_ia WHERE candidatoId = ? ORDER BY creadoEn DESC LIMIT 1')
+      .get(String(candidatoId));
+    return fila ? normalizarAnalisisIA(fila) : null;
+  },
+  listarPorCandidato: async (candidatoId) =>
+    obtenerBd()
+      .prepare('SELECT * FROM analisis_ia WHERE candidatoId = ? ORDER BY creadoEn DESC')
+      .all(String(candidatoId))
+      .map(normalizarAnalisisIA),
+  actualizar: async (id, cambios) => {
+    const fila = {};
+    for (const [columna, valor] of Object.entries(cambios)) {
+      if (!CAMPOS_ANALISIS_ACTUALIZABLES.has(columna)) {
+        continue;
+      }
+      fila[columna] =
+        columna === 'resultado' && typeof valor !== 'string' ? JSON.stringify(valor ?? null) : valor;
+    }
+    const columnas = Object.keys(fila);
+    if (columnas.length === 0) {
+      return dbAnalisisIA.obtenerPorId(id);
+    }
+    obtenerBd()
+      .prepare(`UPDATE analisis_ia SET ${columnas.map((columna) => `${columna} = ?`).join(', ')} WHERE id = ?`)
+      .run(...columnas.map((columna) => fila[columna]), String(id));
+    return dbAnalisisIA.obtenerPorId(id);
+  },
+  actualizarRevision: async (id, { estado, revisadoPor }) =>
+    dbAnalisisIA.actualizar(id, {
+      estado,
+      revisadoPor: revisadoPor ?? null,
+      actualizadoEn: new Date().toISOString(),
+    }),
+  eliminarPorCandidato: async (candidatoId) =>
+    obtenerBd().prepare('DELETE FROM analisis_ia WHERE candidatoId = ?').run(String(candidatoId)).changes,
+};
+
+const CAMPOS_ENTREVISTA_ACTUALIZABLES = new Set([
+  'evaluadorEmail',
+  'titulo',
+  'fechaInicio',
+  'fechaFin',
+  'timezone',
+  'lugar',
+  'notas',
+  'estado',
+  'estadoSync',
+  'googleEventId',
+  'meetUrl',
+  'errorSync',
+]);
+
+const filaEntrevista = (datos) => {
+  const fila = {};
+  for (const [columna, valor] of Object.entries(datos)) {
+    if (CAMPOS_ENTREVISTA_ACTUALIZABLES.has(columna)) {
+      fila[columna] = valor ?? null;
+    }
+  }
+  return fila;
+};
+
+const normalizarEntrevista = (fila) => ({ ...fila });
+
+export const dbEntrevistas = {
+  listar: async ({ desde = null, hasta = null, candidatoId = null } = {}) => {
+    const condiciones = [];
+    const valores = [];
+    if (candidatoId) {
+      condiciones.push('candidatoId = ?');
+      valores.push(String(candidatoId));
+    }
+    if (desde) {
+      condiciones.push('fechaInicio >= ?');
+      valores.push(String(desde));
+    }
+    if (hasta) {
+      condiciones.push('fechaInicio <= ?');
+      valores.push(String(hasta));
+    }
+    const where = condiciones.length > 0 ? ` WHERE ${condiciones.join(' AND ')}` : '';
+    return obtenerBd()
+      .prepare(`SELECT * FROM entrevistas${where} ORDER BY fechaInicio ASC`)
+      .all(...valores)
+      .map(normalizarEntrevista);
+  },
+  obtenerPorId: async (id) => {
+    const fila = obtenerBd().prepare('SELECT * FROM entrevistas WHERE id = ?').get(String(id));
+    return fila ? normalizarEntrevista(fila) : null;
+  },
+  insertar: async (entrevista) => {
+    const ahora = new Date().toISOString();
+    const fila = {
+      id: entrevista.id ?? crypto.randomUUID(),
+      candidatoId: String(entrevista.candidatoId),
+      evaluadorEmail: String(entrevista.evaluadorEmail),
+      titulo: String(entrevista.titulo ?? ''),
+      fechaInicio: String(entrevista.fechaInicio),
+      fechaFin: String(entrevista.fechaFin),
+      timezone: String(entrevista.timezone ?? 'America/Santiago'),
+      lugar: entrevista.lugar ?? null,
+      notas: entrevista.notas ?? null,
+      estado: entrevista.estado ?? 'programada',
+      estadoSync: entrevista.estadoSync ?? 'pendiente',
+      googleEventId: entrevista.googleEventId ?? null,
+      meetUrl: entrevista.meetUrl ?? null,
+      errorSync: entrevista.errorSync ?? null,
+      creadoEn: entrevista.creadoEn ?? ahora,
+      actualizadoEn: entrevista.actualizadoEn ?? ahora,
+    };
+    const columnas = Object.keys(fila);
+    obtenerBd()
+      .prepare(
+        `INSERT INTO entrevistas (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+      )
+      .run(...columnas.map((columna) => fila[columna]));
+    return dbEntrevistas.obtenerPorId(fila.id);
+  },
+  actualizar: async (id, cambios) => {
+    const fila = filaEntrevista(cambios);
+    fila.actualizadoEn = new Date().toISOString();
+    const columnas = Object.keys(fila);
+    const resultado = obtenerBd()
+      .prepare(
+        `UPDATE entrevistas SET ${columnas.map((columna) => `${columna} = ?`).join(', ')} WHERE id = ?`,
+      )
+      .run(...columnas.map((columna) => fila[columna]), String(id));
+    if (resultado.changes === 0) {
+      return null;
+    }
+    return dbEntrevistas.obtenerPorId(id);
+  },
+  eliminar: async (id) =>
+    obtenerBd().prepare('DELETE FROM entrevistas WHERE id = ?').run(String(id)).changes > 0,
+};
+
+const normalizarCredencialGoogle = (fila) => (fila ? { ...fila } : null);
+
+export const dbGoogleCredenciales = {
+  obtenerPorUsuario: async (usuarioEmail) => {
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM google_credenciales WHERE usuarioEmail = ?')
+      .get(String(usuarioEmail ?? '').trim().toLowerCase());
+    return normalizarCredencialGoogle(fila);
+  },
+  guardar: async ({ usuarioEmail, refreshTokenCifrado, scope = null, tokenType = null }) => {
+    const ahora = new Date().toISOString();
+    const email = String(usuarioEmail ?? '').trim().toLowerCase();
+    obtenerBd()
+      .prepare(
+        `INSERT INTO google_credenciales
+          (id, usuarioEmail, refreshTokenCifrado, scope, tokenType, creadoEn, actualizadoEn)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(usuarioEmail) DO UPDATE SET
+           refreshTokenCifrado = excluded.refreshTokenCifrado,
+           scope = excluded.scope,
+           tokenType = excluded.tokenType,
+           actualizadoEn = excluded.actualizadoEn`,
+      )
+      .run(
+        crypto.randomUUID(),
+        email,
+        String(refreshTokenCifrado),
+        scope,
+        tokenType,
+        ahora,
+        ahora,
+      );
+    return dbGoogleCredenciales.obtenerPorUsuario(email);
+  },
+  eliminar: async (usuarioEmail) =>
+    obtenerBd()
+      .prepare('DELETE FROM google_credenciales WHERE usuarioEmail = ?')
+      .run(String(usuarioEmail ?? '').trim().toLowerCase()).changes > 0,
 };
 
 export const dbCandidatos = {
   contar: async () =>
     Number(obtenerBd().prepare('SELECT COUNT(*) AS total FROM candidatos').get()?.total ?? 0),
-  listarTodos: async () => {
+  listarTodos: async (filtros = {}) => {
     const filas = obtenerBd()
       .prepare('SELECT * FROM candidatos ORDER BY fechaPostulacion DESC')
       .all();
-    return Promise.all(
+    const candidatos = await Promise.all(
       filas.map(async (fila) =>
         aCandidato(fila, await dbArchivos.listarPorCandidato(fila.id)),
       ),
     );
+    const minExperiencia = Number(filtros.minExperiencia) || 0;
+    const palabrasClave = parsearPalabrasClave(filtros.palabrasClave);
+    if (minExperiencia <= 0 && palabrasClave.length === 0) {
+      return candidatos;
+    }
+    const filtrados = [];
+    for (const candidato of candidatos) {
+      if (await dbDocumentosTexto.coincide(candidato.id, { minExperiencia, palabrasClave })) {
+        filtrados.push(candidato);
+      }
+    }
+    return filtrados;
   },
   obtenerPorId: async (id) => {
     const fila = obtenerBd().prepare('SELECT * FROM candidatos WHERE id = ?').get(String(id));

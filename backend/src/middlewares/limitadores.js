@@ -27,3 +27,9 @@ export const limitadorConsulta = crearLimitador({
   limite: entorno.esProduccion ? 12 : 80,
   mensaje: 'Demasiadas consultas de estado. Intenta nuevamente en unos minutos.',
 });
+
+export const limitadorIA = crearLimitador({
+  ventanaMs: 15 * 60 * 1000,
+  limite: Math.max(1, entorno.ia.rateLimit),
+  mensaje: 'Se alcanzó el límite de análisis con IA. Intenta nuevamente en unos minutos.',
+});

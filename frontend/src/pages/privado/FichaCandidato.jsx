@@ -1,29 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../services/api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import EstadoBadge from '../../components/EstadoBadge.jsx';
+import DocumentosCandidato from '../../components/DocumentosCandidato.jsx';
+import PanelAnalisisIA from '../../components/ia/PanelAnalisisIA.jsx';
 import { formatearFecha, formatearPorcentaje } from '../../utils/evaluacionUtils.js';
 import './ficha-impresion.css';
-
-const ETIQUETA_TIPO = {
-  cv: 'Currículum',
-  antecedentes: 'Antecedentes',
-};
-
-const formatearTamano = (bytes) => {
-  const valor = Number(bytes);
-  if (!Number.isFinite(valor) || valor <= 0) {
-    return '—';
-  }
-  if (valor < 1024) {
-    return `${valor} B`;
-  }
-  if (valor < 1024 * 1024) {
-    return `${(valor / 1024).toFixed(1)} KB`;
-  }
-  return `${(valor / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 const Campo = ({ etiqueta, children }) => (
   <div className="ficha-campo">
@@ -34,7 +18,9 @@ const Campo = ({ etiqueta, children }) => (
 
 export default function FichaCandidato() {
   const { id } = useParams();
+  const { usuario } = useAuth();
   const { mostrarToast } = useToast();
+  const puedeEvaluar = usuario?.rol === 'psicologo';
   const [ficha, setFicha] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -159,6 +145,14 @@ export default function FichaCandidato() {
         <button type="button" className="boton boton-secundario boton-sm" onClick={enviarPorCorreo}>
           <i className="bi bi-envelope" aria-hidden="true" /> Enviar por correo
         </button>
+        {puedeEvaluar && (
+          <Link
+            to={`/agenda?candidato=${candidato.id}`}
+            className="boton boton-secundario boton-sm"
+          >
+            <i className="bi bi-calendar-plus" aria-hidden="true" /> Agendar entrevista
+          </Link>
+        )}
       </div>
 
       <article className="ficha-hoja">
@@ -226,56 +220,14 @@ export default function FichaCandidato() {
           )}
         </section>
 
-        <section className="ficha-seccion" aria-label="Documentos del candidato">
-          <h2>Documentos</h2>
-          {candidato.archivos?.length ? (
-            <div className="tabla-contenedor">
-              <table className="tabla-aqua">
-                <thead>
-                  <tr>
-                    <th scope="col">Documento</th>
-                    <th scope="col">Tipo</th>
-                    <th scope="col">Tamaño</th>
-                    <th scope="col">Cargado</th>
-                    <th scope="col" className="text-end no-imprimir">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidato.archivos.map((archivo) => (
-                    <tr key={archivo.id}>
-                      <td>{archivo.nombreOriginal}</td>
-                      <td>{ETIQUETA_TIPO[archivo.tipo] ?? archivo.tipo}</td>
-                      <td>{formatearTamano(archivo.tamano)}</td>
-                      <td>{formatearFecha(archivo.creadoEn)}</td>
-                      <td className="text-end no-imprimir">
-                        <div className="ficha-acciones ficha-acciones-compactas">
-                          <button
-                            type="button"
-                            className="boton boton-secundario boton-sm"
-                            onClick={() => abrirArchivo(archivo, 'preview')}
-                          >
-                            <i className="bi bi-eye" aria-hidden="true" /> Ver
-                          </button>
-                          <button
-                            type="button"
-                            className="boton boton-secundario boton-sm"
-                            onClick={() => abrirArchivo(archivo, 'download')}
-                          >
-                            <i className="bi bi-download" aria-hidden="true" /> Descargar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="ficha-vacio">Sin documentos adjuntos.</p>
-          )}
-        </section>
+        <PanelAnalisisIA candidato={candidato} puedeEvaluar={puedeEvaluar} />
+
+        <DocumentosCandidato
+          candidato={candidato}
+          puedeEvaluar={puedeEvaluar}
+          onActualizado={cargar}
+          onAbrirArchivo={abrirArchivo}
+        />
 
         <section className="ficha-seccion" aria-label="Historial de etapas">
           <h2>Historial de etapas</h2>

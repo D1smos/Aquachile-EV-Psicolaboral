@@ -7,7 +7,7 @@ import {
   crearPostulacion,
   resumenPublico,
 } from '../services/candidato.service.js';
-import { enviarCorreoConfirmacion } from '../services/correo.service.js';
+import { notificarNuevaPostulacion } from '../services/resend.service.js';
 import { validarPostulacion } from '../validators/postulacion.validator.js';
 
 const FOLIO_REGEX = /^AQ-\d{4}-[A-F0-9]{8}$/;
@@ -31,7 +31,12 @@ export const crearPostulacionController = envolver(async (req, res) => {
     mensaje: 'Postulación registrada correctamente',
     candidato: resumenPublico(candidato),
   });
-  void enviarCorreoConfirmacion(candidato);
+  void notificarNuevaPostulacion({
+    nombre: candidato.nombre,
+    email: candidato.correo,
+    cargo: candidato.cargo,
+    folio: candidato.folio,
+  });
 });
 
 export const consultarPostulacionController = envolver(async (req, res) => {

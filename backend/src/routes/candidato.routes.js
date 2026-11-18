@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { requiereAutenticacion, requiereRol } from '../middlewares/autenticacion.js';
 import { subirPostulacion } from '../middlewares/archivos.js';
+import { rutasAnalisis } from './analisis.routes.js';
+import { rutasDocumentos } from './documento.routes.js';
 import { ROL_EVALUADOR } from '../services/auth.service.js';
 import {
   actualizar,
@@ -25,6 +27,9 @@ export const rutasCandidatos = Router();
 
 rutasCandidatos.use(requiereAutenticacion);
 rutasCandidatos.get('/', listar);
+rutasCandidatos.use('/:id/documentos', rutasDocumentos);
+rutasCandidatos.use('/:id/analisis', rutasAnalisis);
+rutasCandidatos.use('/:id/analisis-ia', rutasAnalisis);
 rutasCandidatos.get('/exportar.csv', exportarCsv);
 rutasCandidatos.get('/comparar', comparar);
 rutasCandidatos.post('/', requiereRol(ROL_EVALUADOR), subirPostulacion, crearManual);
