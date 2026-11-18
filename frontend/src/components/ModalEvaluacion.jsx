@@ -41,11 +41,14 @@ export default function ModalEvaluacion({
           resumen: candidato.resumenIA,
           afinidad: candidato.afinidadIA,
           borrador: candidato.borradorIA,
+          borradorObservacion: candidato.borradorIA,
           coincidencias: [],
+          fuente: 'local',
         }
       : null,
   );
   const [generando, setGenerando] = useState(false);
+  const [focoAsistencia, setFocoAsistencia] = useState('');
   const [ranking, setRanking] = useState(null);
 
   const cargarRanking = useCallback(async () => {
@@ -131,9 +134,21 @@ export default function ModalEvaluacion({
   const generarAsistencia = async () => {
     setGenerando(true);
     try {
-      const datos = await api.post(`/candidatos/${candidato.id}/asistente`);
+      const datos = await api.post(`/candidatos/${candidato.id}/asistente`, {
+        respuestas: formulario.respuestas,
+        puntaje: previsualizacion.puntaje,
+        idoneidad: previsualizacion.idoneidad,
+        dimensiones: previsualizacion.dimensiones,
+        observaciones: formulario.observaciones,
+        foco: focoAsistencia,
+      });
       setAsistencia(datos.asistencia);
-      mostrarToast('Asistencia generada a partir del perfil y los documentos', 'exito');
+      mostrarToast(
+        datos.asistencia?.fuente === 'ia'
+          ? 'Observación asistida con IA según la evaluación actual'
+          : 'Asistencia local generada según la evaluación actual',
+        'exito',
+      );
       cargarRanking();
     } catch (error) {
       mostrarToast(error.message, 'error');
@@ -142,12 +157,14 @@ export default function ModalEvaluacion({
     }
   };
 
+  const borradorParaInsertar = asistencia?.borradorObservacion ?? asistencia?.borrador;
+
   const usarBorrador = () => {
-    if (!asistencia?.borrador) {
+    if (!borradorParaInsertar) {
       return;
     }
-    setFormulario((previo) => ({ ...previo, observaciones: asistencia.borrador }));
-    mostrarToast('Borrador copiado a las observaciones, revísalo antes de guardar', 'exito');
+    setFormulario((previo) => ({ ...previo, observaciones: borradorParaInsertar }));
+    mostrarToast('Observación asistida copiada, revísala antes de guardar', 'exito');
   };
 
   const archivos = candidato.archivos ?? [];
@@ -253,11 +270,47 @@ export default function ModalEvaluacion({
               </button>
             </div>
             <small className="ayuda-campo">
-              Analiza el perfil y el CV con reglas de coincidencia. No reemplaza la evaluación profesional.
+              Cruza el CV con los puntajes y notas que llevas en esta evaluación. No reemplaza el juicio profesional.
             </small>
+            <div className="campo-filtro">
+              <label className="etiqueta-campo" htmlFor="foco-asistencia">
+                Foco para la observación (opcional)
+              </label>
+              <input
+                id="foco-asistencia"
+                className="control-campo"
+                maxLength={300}
+                placeholder="Ej. reforzar liderazgo, seguridad o trabajo en equipo"
+                value={focoAsistencia}
+                onChange={(evento) => setFocoAsistencia(evento.target.value)}
+              />
+            </div>
             {asistencia && (
               <div className="asistencia-resultado">
+                <div className="asistencia-cabecera">
+                  <span className={`chip ${asistencia.fuente === 'ia' ? 'chip-ok' : 'chip-brecha'}`}>
+                    {asistencia.fuente === 'ia' ? 'IA' : 'Asistencia local'}
+                  </span>
+                  {asistencia.advertenciaIA && <small>{asistencia.advertenciaIA}</small>}
+                </div>
                 <p>{asistencia.resumen}</p>
+                {asistencia.datosClave && (
+                  <div className="asistencia-datos-clave">
+                    <small>Datos clave del CV</small>
+                    <p>{asistencia.datosClave.resumenEjecutivo}</p>
+                    <div className="asistencia-datos-clave-meta">
+                      <span><i className="bi bi-briefcase" aria-hidden="true" /> {asistencia.datosClave.cargo || candidato.cargo}</span>
+                      <span><i className="bi bi-clock-history" aria-hidden="true" /> {asistencia.datosClave.anosExperienciaEstimados} años estimados</span>
+                    </div>
+                    {asistencia.datosClave.palabrasClave?.length > 0 && (
+                      <div className="chips">
+                        {asistencia.datosClave.palabrasClave.map((clave) => (
+                          <span key={clave} className="chip chip-ok">{clave}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {Number.isFinite(asistencia.afinidad) ? (
                   <div className="asistencia-afinidad">
                     <span className="puntaje-valor">{asistencia.afinidad}%</span>
@@ -299,9 +352,10 @@ export default function ModalEvaluacion({
                   </small>
                 )}
                 <div className="asistencia-borrador">
-                  <p>{asistencia.borrador}</p>
+                  <small>Borrador de observación guiado por la evaluación</small>
+                  <p>{borradorParaInsertar}</p>
                   <button type="button" className="boton boton-secundario boton-sm" onClick={usarBorrador}>
-                    <i className="bi bi-arrow-down-square" aria-hidden="true" /> Usar como observaciones
+                    <i className="bi bi-arrow-down-square" aria-hidden="true" /> Insertar en observaciones
                   </button>
                 </div>
               </div>

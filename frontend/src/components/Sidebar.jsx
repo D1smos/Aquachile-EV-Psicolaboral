@@ -114,6 +114,10 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       </nav>
 
       <div className="menu-secundario">
+        <Link to="/agenda" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+          <i className="bi bi-calendar2-week" aria-hidden="true" />
+          <span>Agenda</span>
+        </Link>
         <Link to="/documentos" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
           <i className="bi bi-folder2-open" aria-hidden="true" />
           <span>Documentos</span>

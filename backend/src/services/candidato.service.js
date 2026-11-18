@@ -1,111 +1,17 @@
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { readFile, unlink } from 'node:fs/promises';
-import { fileTypeFromBuffer } from 'file-type';
+import { unlink } from 'node:fs/promises';
 import { dbArchivos, dbCandidatos, dbHistorial } from '../config/baseDatos.js';
 import { entorno } from '../config/entorno.js';
 import { almacenamiento } from './almacenamiento/index.js';
+import { limpiarSubidos, prepararArchivo, procesarDocumento } from './documentos/documento.service.js';
 import { ESTADOS_PROCESO, TIPOS_ARCHIVO } from '../domain/constantes.js';
 import { ErrorHttp, noEncontrado } from '../utils/ErrorHttp.js';
+import { logger } from '../utils/logger.js';
 import { normalizarRut } from '../utils/validadores.js';
 
 const MENSAJE_DUPLICADO =
   'Ya existe una postulación con esos datos. Revisa la ficha existente o contacta a Reclutamiento.';
-
-const MIME_POR_EXTENSION = Object.freeze({
-  '.pdf': 'application/pdf',
-  '.doc': 'application/msword',
-  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-});
-
-const MIME_FIRMA_ESPERADA = Object.freeze({
-  '.pdf': ['application/pdf'],
-  '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-  '.xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-});
-
-const validarFirma = async (buffer, extension) => {
-  if (extension === '.doc') {
-    return;
-  }
-  const detectado = await fileTypeFromBuffer(buffer);
-  const esperados = MIME_FIRMA_ESPERADA[extension] ?? [];
-  if (!detectado || !esperados.includes(detectado.mime)) {
-    throw new ErrorHttp('El contenido del archivo no coincide con su extensión', 400);
-  }
-};
-
-const extensionDe = (archivo) =>
-  path.extname(archivo.originalname || archivo.filename || archivo.path || '').toLowerCase();
-
-const limpiarSubidos = async (claves) => {
-  for (const clave of claves) {
-    try {
-      await almacenamiento.eliminar(clave);
-    } catch {
-      // La limpieza no debe ocultar el error original.
-    }
-  }
-};
-
-const limpiarTemporales = async (archivos) => {
-  for (const archivo of archivos) {
-    try {
-      await unlink(archivo.path);
-    } catch {
-      // El archivo temporal pudo haber sido eliminado antes.
-    }
-  }
-};
-
-const prepararArchivo = async (tipo, archivo, candidatoId, subidos) => {
-  const buffer = await readFile(archivo.path);
-  const extension = extensionDe(archivo);
-  await validarFirma(buffer, extension);
-  const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-  const mimetype = archivo.mimetype || MIME_POR_EXTENSION[extension] || 'application/octet-stream';
-
-  const existente = await dbArchivos.buscarPorHash(hash);
-  const reutilizable =
-    existente?.storageKey &&
-    existente.proveedor === almacenamiento.proveedor &&
-    (existente.bucket ?? null) === (almacenamiento.bucket ?? null);
-
-  let ubicacion;
-  if (reutilizable) {
-    ubicacion = {
-      key: existente.storageKey,
-      proveedor: existente.proveedor,
-      bucket: existente.bucket ?? null,
-    };
-  } else {
-    const key = `documentos/${tipo}/${hash}${extension}`;
-    ubicacion = await almacenamiento.guardar({ key, buffer, mimetype });
-    subidos.push(ubicacion.key);
-  }
-
-  try {
-    await unlink(archivo.path);
-  } catch {
-    // Si el staging ya no existe, continuar.
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    tipo,
-    nombreOriginal: archivo.originalname,
-    nombreAlmacenado: path.basename(ubicacion.key),
-    ruta: ubicacion.key,
-    mimetype,
-    tamano: buffer.length,
-    storageKey: ubicacion.key,
-    proveedor: ubicacion.proveedor,
-    bucket: ubicacion.bucket,
-    hash,
-    creadoEn: new Date().toISOString(),
-  };
-};
 
 const generarFolio = () => {
   const anio = new Date().getFullYear();
@@ -133,16 +39,24 @@ export const crearPostulacion = async (datos, archivos, responsable = 'postulaci
   const subidos = [];
   const temporales = [...(archivos?.cv ?? []), ...(archivos?.antecedentes ?? [])];
   const listaArchivos = [];
+  const buffers = new Map();
 
   try {
     const cv = archivos?.cv?.[0];
     if (cv) {
-      listaArchivos.push(await prepararArchivo(TIPOS_ARCHIVO.CV, cv, id, subidos));
+      const preparado = await prepararArchivo(TIPOS_ARCHIVO.CV, cv, id, subidos);
+      listaArchivos.push(preparado.archivo);
+      buffers.set(preparado.archivo.id, preparado.buffer);
     }
     for (const antecedente of archivos?.antecedentes ?? []) {
-      listaArchivos.push(
-        await prepararArchivo(TIPOS_ARCHIVO.ANTECEDENTES, antecedente, id, subidos),
+      const preparado = await prepararArchivo(
+        TIPOS_ARCHIVO.ANTECEDENTES,
+        antecedente,
+        id,
+        subidos,
       );
+      listaArchivos.push(preparado.archivo);
+      buffers.set(preparado.archivo.id, preparado.buffer);
     }
   } catch (error) {
     await limpiarSubidos(subidos);
@@ -184,6 +98,16 @@ export const crearPostulacion = async (datos, archivos, responsable = 'postulaci
     for (const archivo of listaArchivos) {
       await dbArchivos.insertar(creado.id, archivo);
     }
+    for (const archivo of listaArchivos) {
+      try {
+        await procesarDocumento(archivo, buffers.get(archivo.id));
+      } catch (error) {
+        logger.warn('No se pudo guardar el texto extraído del documento', {
+          archivoId: archivo.id,
+          error: error.message,
+        });
+      }
+    }
   } catch (error) {
     await limpiarSubidos(subidos);
     throw error;
@@ -200,7 +124,7 @@ export const crearPostulacion = async (datos, archivos, responsable = 'postulaci
   return completo;
 };
 
-export const listarCandidatos = async () => dbCandidatos.listarTodos();
+export const listarCandidatos = async (filtros = {}) => dbCandidatos.listarTodos(filtros);
 
 export const obtenerCandidato = async (id) => {
   const candidato = await dbCandidatos.obtenerPorId(id);
@@ -262,7 +186,7 @@ export const guardarAsistencia = async (id, asistencia) => {
   const actualizado = await dbCandidatos.actualizar(id, {
     resumenIA: asistencia.resumen,
     afinidadIA: asistencia.afinidad,
-    borradorIA: asistencia.borrador,
+    borradorIA: asistencia.borradorObservacion ?? asistencia.borrador,
     fechaAsistencia: new Date().toISOString(),
     fechaActualizacion: new Date().toISOString(),
   });

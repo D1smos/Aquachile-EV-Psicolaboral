@@ -57,3 +57,28 @@ export const subirPostulacion = multer({ storage: almacenamiento, fileFilter: fi
   { name: TIPOS_ARCHIVO.CV, maxCount: 1 },
   { name: TIPOS_ARCHIVO.ANTECEDENTES, maxCount: 4 },
 ]);
+
+const filtroDocumento = (req, file, callback) => {
+  const extension = path.extname(file.originalname).toLowerCase();
+  if (!EXTENSIONES_ANTECEDENTES.has(extension) || !MIME_ANTECEDENTES.has(file.mimetype)) {
+    callback(
+      new ErrorHttp('Solo se aceptan documentos PDF, DOC, DOCX o XLSX', 400, [
+        { campo: file.fieldname, mensaje: 'Formato de archivo no permitido' },
+      ]),
+    );
+    return;
+  }
+  callback(null, true);
+};
+
+export const subirDocumento = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: filtroDocumento,
+  limits: {
+    fileSize: entorno.documentos.limiteMb * 1024 * 1024,
+    files: 1,
+  },
+}).fields([
+  { name: 'archivo', maxCount: 1 },
+  { name: 'documento', maxCount: 1 },
+]);

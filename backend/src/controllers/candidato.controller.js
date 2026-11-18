@@ -46,7 +46,10 @@ const notificarAprobacion = async (anterior, actual) => {
 };
 
 export const listar = envolver(async (req, res) => {
-  const candidatos = await listarCandidatos();
+  const candidatos = await listarCandidatos({
+    minExperiencia: req.query?.minExperiencia,
+    palabrasClave: req.query?.palabrasClave,
+  });
   res.json({ ok: true, total: candidatos.length, candidatos });
 });
 
@@ -124,7 +127,7 @@ export const evaluar = envolver(async (req, res) => {
 });
 
 export const asistir = envolver(async (req, res) => {
-  const asistencia = await generarAsistencia(req.params.id);
+  const asistencia = await generarAsistencia(req.params.id, req.body ?? {});
   const candidato = await guardarAsistencia(req.params.id, asistencia);
   res.json({
     ok: true,
@@ -135,7 +138,10 @@ export const asistir = envolver(async (req, res) => {
 });
 
 export const exportarCsv = envolver(async (req, res) => {
-  const candidatos = await listarCandidatos();
+  const candidatos = await listarCandidatos({
+    minExperiencia: req.query?.minExperiencia,
+    palabrasClave: req.query?.palabrasClave,
+  });
   const filtrados = filtrarParaExportar(candidatos, req.query ?? {});
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="candidatos.csv"');
