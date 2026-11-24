@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import {
   calcularMetricas,
   clasificarIdoneidad,
@@ -35,8 +36,8 @@ const pendiente = {
 
 describe('utilidades de evaluación', () => {
   it('detecta candidatos evaluados', () => {
-    expect(estaEvaluado(evaluado)).toBeTrue();
-    expect(estaEvaluado(pendiente)).toBeFalse();
+    expect(estaEvaluado(evaluado)).toBe(true);
+    expect(estaEvaluado(pendiente)).toBe(false);
   });
 
   it('calcula métricas del dashboard', () => {

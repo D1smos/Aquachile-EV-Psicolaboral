@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { construirAsistencia, semaforoDe } from '../src/services/asistente.service.js';
+
+process.env.JWT_SECRET ||= 'secreto-de-prueba';
+const { construirAsistencia, semaforoDe } = await import('../src/services/asistente.service.js');
 
 const candidatoBase = {
   nombre: 'Ana Prueba',
@@ -26,6 +28,12 @@ test('sin CV legible la afinidad es nula y lo indica', () => {
   assert.equal(asistencia.sinCv, true);
   assert.match(asistencia.resumen, /CV legible/);
   assert.match(asistencia.borrador, /revisar antes de usar/i);
+  assert.deepEqual(asistencia.criterios_usados, [
+    'Coincidencia de palabras clave del cargo y la familia del cargo con el texto legible del CV.',
+    'Experiencia, formación y disponibilidad declaradas para contextualizar el resumen.',
+  ]);
+  assert.match(asistencia.limitaciones, /sesgos/i);
+  assert.equal(asistencia.requiere_revision_humana, true);
 });
 
 test('la afinidad mide coincidencias entre CV y cargo', () => {
@@ -35,6 +43,9 @@ test('la afinidad mide coincidencias entre CV y cargo', () => {
   assert.equal(asistencia.afinidad, 67);
   assert.equal(asistencia.sinCv, false);
   assert.match(asistencia.resumen, /67%/);
+  assert.ok(asistencia.criterios_usados.every((criterio) => typeof criterio === 'string'));
+  assert.match(asistencia.limitaciones, /nunca debe usarse para descartar/i);
+  assert.equal(asistencia.requiere_revision_humana, true);
 });
 
 test('un CV sin relación da afinidad cero pero no nula', () => {

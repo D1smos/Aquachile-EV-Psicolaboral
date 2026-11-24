@@ -1,4 +1,5 @@
 import { act, createElement as h } from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext.jsx';
@@ -109,14 +110,14 @@ describe('AppLayout', () => {
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('true');
-    expect(navegacion.classList.contains('navegacion-abierta')).toBeTrue();
+    expect(navegacion.classList.contains('navegacion-abierta')).toBe(true);
 
     act(() => {
       boton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(boton.getAttribute('aria-expanded')).toBe('false');
-    expect(navegacion.classList.contains('navegacion-abierta')).toBeFalse();
+    expect(navegacion.classList.contains('navegacion-abierta')).toBe(false);
   });
 
   it('sin sesión muestra enlaces públicos e Ingresar', () => {
@@ -125,23 +126,92 @@ describe('AppLayout', () => {
       (nodo) => nodo.textContent,
     );
 
-    expect(textos).toEqual(['Inicio', 'Postulación']);
-    expect(montaje.contenedor.querySelector('.navegacion').textContent).toContain('Ingresar');
+    expect(textos).toEqual(['Inicio', 'Ofertas', 'Postulación', 'Consultar estado']);
+    expect(montaje.contenedor.querySelector('.navegacion').textContent).toContain(
+      'Iniciar sesión',
+    );
     expect(montaje.contenedor.querySelector('.barra-privada')).toBeNull();
     expect(montaje.contenedor.querySelector('.pie-compacto')).toBeNull();
   });
 
-  it('con sesión en la ruta privada muestra usuario, Salir y pie compacto', () => {
+  it('con sesión en la ruta privada muestra sidebar, usuario y pie compacto', () => {
     localStorage.setItem(CLAVE_USUARIO, JSON.stringify(usuarioDemo));
     montaje = montar('/dashboard');
     const { contenedor } = montaje;
 
-    expect(contenedor.querySelector('.barra-privada')).not.toBeNull();
-    expect(contenedor.querySelector('.usuario-datos strong').textContent).toBe('Ana Pérez');
-    expect(contenedor.querySelector('.usuario-datos small').textContent).toBe('ana@aquachile.cl');
-    expect(contenedor.textContent).toContain('Salir');
+    expect(contenedor.querySelector('.menu-lateral')).not.toBeNull();
+    expect(contenedor.querySelector('.menu-usuario-datos strong').textContent).toBe('Ana Pérez');
+    expect(contenedor.querySelector('.menu-usuario-datos small').textContent).toContain(
+      'Evaluador',
+    );
+    expect(contenedor.textContent).toContain('Cerrar sesión');
     expect(contenedor.querySelector('.navegacion')).toBeNull();
+    expect(contenedor.querySelector('.barra-nav')).toBeNull();
     expect(contenedor.querySelector('.pie-compacto')).not.toBeNull();
-    expect(contenedor.querySelector('.layout-main').classList.contains('contenido-privado')).toBeTrue();
+    expect(contenedor.querySelector('.layout-main').classList.contains('contenido-privado')).toBe(true);
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-evaluador')).toBe(true);
+  });
+
+  it('aplica el tema visual de analista sin quitar el sidebar', () => {
+    localStorage.setItem(
+      CLAVE_USUARIO,
+      JSON.stringify({ ...usuarioDemo, rol: 'analista' }),
+    );
+    montaje = montar('/dashboard');
+    const { contenedor } = montaje;
+
+    expect(contenedor.querySelector('.app-layout-privado').classList.contains('tema-rol-analista')).toBe(true);
+    expect(contenedor.querySelector('.menu-lateral')).not.toBeNull();
+    expect(contenedor.querySelector('.menu-usuario-datos small').textContent).toContain('Analista');
+  });
+
+  it('abre y cierra el menú lateral en móvil', () => {
+    localStorage.setItem(CLAVE_USUARIO, JSON.stringify(usuarioDemo));
+    montaje = montar('/dashboard');
+    const { contenedor } = montaje;
+    const boton = contenedor.querySelector('.boton-menu-privado');
+    const menu = contenedor.querySelector('.menu-lateral');
+
+    expect(boton.getAttribute('aria-expanded')).toBe('false');
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(false);
+
+    act(() => {
+      boton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(boton.getAttribute('aria-expanded')).toBe('true');
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(true);
+    expect(contenedor.querySelector('.menu-overlay')).not.toBeNull();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    act(() => {
+      contenedor
+        .querySelector('.menu-cerrar')
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(boton.getAttribute('aria-expanded')).toBe('false');
+    expect(menu.classList.contains('menu-lateral-abierto')).toBe(false);
+    expect(contenedor.querySelector('.menu-overlay')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('cierra el menú lateral con Escape', () => {
+    localStorage.setItem(CLAVE_USUARIO, JSON.stringify(usuarioDemo));
+    montaje = montar('/dashboard');
+    const { contenedor } = montaje;
+    const boton = contenedor.querySelector('.boton-menu-privado');
+
+    act(() => {
+      boton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(contenedor.querySelector('.menu-lateral-abierto')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+
+    expect(contenedor.querySelector('.menu-lateral-abierto')).toBeNull();
+    expect(contenedor.querySelector('.menu-overlay')).toBeNull();
   });
 });

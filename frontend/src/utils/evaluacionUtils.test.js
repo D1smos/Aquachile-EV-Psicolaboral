@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { expect, test } from 'vitest';
 import {
   ESTADOS_PROCESO,
   IDONEIDADES,
@@ -30,36 +29,35 @@ const respuestasPerfectas = { p1: 5, p2: 5, p3: 5 };
 const respuestasMedias = { p1: 3, p2: 3, p3: 3 };
 
 test('normaliza tildes y mayúsculas para las búsquedas', () => {
-  assert.equal(normalizar('  José Pérez  '), 'jose perez');
+  expect(normalizar('  José Pérez  ')).toBe('jose perez');
 });
 
 test('calcula el puntaje total ponderado', () => {
-  assert.equal(calcularPuntaje(respuestasPerfectas, cuestionario), 100);
-  assert.equal(calcularPuntaje(respuestasMedias, cuestionario), 60);
+  expect(calcularPuntaje(respuestasPerfectas, cuestionario)).toBe(100);
+  expect(calcularPuntaje(respuestasMedias, cuestionario)).toBe(60);
 });
 
 test('clasifica la idoneidad según umbrales y dimensiones críticas', () => {
-  assert.equal(clasificarIdoneidad(90, []), IDONEIDADES.IDEONEO);
-  assert.equal(clasificarIdoneidad(68, []), IDONEIDADES.CON_OBSERVACIONES);
-  assert.equal(clasificarIdoneidad(40, []), IDONEIDADES.NO_IDONEO);
-  assert.equal(
-    clasificarIdoneidad(90, [{ id: 'etica', puntaje: 20 }]),
+  expect(clasificarIdoneidad(90, [])).toBe(IDONEIDADES.IDEONEO);
+  expect(clasificarIdoneidad(68, [])).toBe(IDONEIDADES.CON_OBSERVACIONES);
+  expect(clasificarIdoneidad(40, [])).toBe(IDONEIDADES.NO_IDONEO);
+  expect(clasificarIdoneidad(90, [{ id: 'etica', puntaje: 20 }])).toBe(
     IDONEIDADES.CON_OBSERVACIONES,
   );
 });
 
 test('la evaluación completa devuelve puntaje, dimensiones e idoneidad', () => {
   const resultado = evaluarRespuestas(respuestasPerfectas, cuestionario);
-  assert.equal(resultado.puntaje, 100);
-  assert.equal(resultado.dimensiones.length, 2);
-  assert.equal(resultado.idoneidad, IDONEIDADES.IDEONEO);
+  expect(resultado.puntaje).toBe(100);
+  expect(resultado.dimensiones).toHaveLength(2);
+  expect(resultado.idoneidad).toBe(IDONEIDADES.IDEONEO);
 });
 
 test('detecta respuestas incompletas', () => {
   const incompleta = validarRespuestas({ p1: 4 }, cuestionario);
-  assert.equal(incompleta.valido, false);
-  assert.deepEqual(incompleta.faltantes, ['p2', 'p3']);
-  assert.equal(validarRespuestas(respuestasPerfectas, cuestionario).valido, true);
+  expect(incompleta.valido).toBe(false);
+  expect(incompleta.faltantes).toEqual(['p2', 'p3']);
+  expect(validarRespuestas(respuestasPerfectas, cuestionario).valido).toBe(true);
 });
 
 test('calcula métricas del dashboard', () => {
@@ -72,13 +70,13 @@ test('calcula métricas del dashboard', () => {
   ];
 
   const metricas = calcularMetricas(candidatos, hoy);
-  assert.equal(metricas.totalCandidatos, 4);
-  assert.equal(metricas.postulacionesMes, 3);
-  assert.equal(metricas.evaluacionesCompletadas, 2);
-  assert.equal(metricas.pctEvaluacionesCompletadas, 50);
-  assert.equal(metricas.porEstado.Pendiente, 1);
-  assert.equal(metricas.porEstado['En Proceso'], 1);
-  assert.deepEqual(ESTADOS_PROCESO.length, 4);
+  expect(metricas.totalCandidatos).toBe(4);
+  expect(metricas.postulacionesMes).toBe(3);
+  expect(metricas.evaluacionesCompletadas).toBe(2);
+  expect(metricas.pctEvaluacionesCompletadas).toBe(50);
+  expect(metricas.porEstado.Pendiente).toBe(1);
+  expect(metricas.porEstado['En Proceso']).toBe(1);
+  expect(ESTADOS_PROCESO).toHaveLength(4);
 });
 
 test('filtra por texto, cargo, estado y rango de fechas', () => {
@@ -87,13 +85,13 @@ test('filtra por texto, cargo, estado y rango de fechas', () => {
     { nombre: 'Pedro Pizarro Díaz', rut: '11.111.111-1', correo: 'pedro@correo.cl', folio: 'AQ-2', cargo: 'Monitor Producción', estado: 'Aprobado', fechaPostulacion: '2026-08-15T10:00:00.000Z' },
   ];
 
-  assert.equal(filtrarCandidatos(candidatos, { busqueda: 'gonzalez' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { busqueda: 'PEDRO' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { estado: 'Aprobado' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { cargo: 'Gruero' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { desde: '2026-09-01' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { hasta: '2026-09-30' }).length, 1);
-  assert.equal(filtrarCandidatos(candidatos, { busqueda: 'zzz' }).length, 0);
+  expect(filtrarCandidatos(candidatos, { busqueda: 'gonzalez' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { busqueda: 'PEDRO' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { estado: 'Aprobado' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { cargo: 'Gruero' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { desde: '2026-09-01' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { hasta: '2026-09-30' })).toHaveLength(1);
+  expect(filtrarCandidatos(candidatos, { busqueda: 'zzz' })).toHaveLength(0);
 });
 
 test('ordena por fecha, nombre y puntaje', () => {
@@ -101,13 +99,13 @@ test('ordena por fecha, nombre y puntaje', () => {
     { nombre: 'Ana', fechaPostulacion: '2026-10-01T10:00:00.000Z', puntaje: 80 },
     { nombre: 'Beto', fechaPostulacion: '2026-10-03T10:00:00.000Z', puntaje: 55 },
   ];
-  assert.equal(ordenarCandidatos(candidatos, 'fechaPostulacion', 'desc')[0].nombre, 'Beto');
-  assert.equal(ordenarCandidatos(candidatos, 'fechaPostulacion', 'asc')[0].nombre, 'Ana');
-  assert.equal(ordenarCandidatos(candidatos, 'nombre', 'asc')[0].nombre, 'Ana');
-  assert.equal(ordenarCandidatos(candidatos, 'puntaje', 'asc')[0].puntaje, 55);
+  expect(ordenarCandidatos(candidatos, 'fechaPostulacion', 'desc')[0].nombre).toBe('Beto');
+  expect(ordenarCandidatos(candidatos, 'fechaPostulacion', 'asc')[0].nombre).toBe('Ana');
+  expect(ordenarCandidatos(candidatos, 'nombre', 'asc')[0].nombre).toBe('Ana');
+  expect(ordenarCandidatos(candidatos, 'puntaje', 'asc')[0].puntaje).toBe(55);
 });
 
 test('formatea porcentajes según locale chileno', () => {
-  assert.equal(formatearPorcentaje(78), '78 %');
-  assert.equal(formatearPorcentaje(undefined), '0 %');
+  expect(formatearPorcentaje(78)).toBe('78 %');
+  expect(formatearPorcentaje(undefined)).toBe('0 %');
 });
