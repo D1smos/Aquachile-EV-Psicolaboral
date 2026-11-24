@@ -8,12 +8,16 @@ import {
   crearPostulacion,
   editarCandidato,
   eliminarCandidato,
+  fichaCandidato,
   guardarAsistencia,
   listarCandidatos,
+  listarDocumentos,
   localizarArchivo,
   obtenerCandidato,
   obtenerHistorial,
   registrarEvaluacion,
+  rutaLocalArchivo,
+  urlArchivo,
 } from '../services/candidato.service.js';
 import { validarPostulacion } from '../validators/postulacion.validator.js';
 import { estadoPorIdoneidad, evaluarRespuestas } from '../services/evaluacion.service.js';
@@ -28,9 +32,10 @@ const lanzarErrores = (errores, mensaje) => {
   }
 };
 
-const cabeceraContenido = (nombreOriginal) => {
+const cabeceraContenido = (nombreOriginal, modo = 'preview') => {
   const ascii = nombreOriginal.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
-  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombreOriginal)}`;
+  const disposicion = modo === 'download' ? 'attachment' : 'inline';
+  return `${disposicion}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombreOriginal)}`;
 };
 
 const notificarAprobacion = async (anterior, actual) => {
@@ -41,7 +46,10 @@ const notificarAprobacion = async (anterior, actual) => {
 };
 
 export const listar = envolver(async (req, res) => {
-  const candidatos = await listarCandidatos();
+  const candidatos = await listarCandidatos({
+    minExperiencia: req.query?.minExperiencia,
+    palabrasClave: req.query?.palabrasClave,
+  });
   res.json({ ok: true, total: candidatos.length, candidatos });
 });
 
@@ -119,7 +127,7 @@ export const evaluar = envolver(async (req, res) => {
 });
 
 export const asistir = envolver(async (req, res) => {
-  const asistencia = await generarAsistencia(req.params.id);
+  const asistencia = await generarAsistencia(req.params.id, req.body ?? {});
   const candidato = await guardarAsistencia(req.params.id, asistencia);
   res.json({
     ok: true,
@@ -130,7 +138,10 @@ export const asistir = envolver(async (req, res) => {
 });
 
 export const exportarCsv = envolver(async (req, res) => {
-  const candidatos = await listarCandidatos();
+  const candidatos = await listarCandidatos({
+    minExperiencia: req.query?.minExperiencia,
+    palabrasClave: req.query?.palabrasClave,
+  });
   const filtrados = filtrarParaExportar(candidatos, req.query ?? {});
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="candidatos.csv"');
@@ -161,20 +172,61 @@ export const historial = envolver(async (req, res) => {
   res.json({ ok: true, total: eventos.length, historial: eventos });
 });
 
-export const descargarArchivo = envolver(async (req, res, next) => {
+const servirArchivo = async (req, res, next, modo) => {
   const candidato = await obtenerCandidato(req.params.id);
-  const { archivo, rutaAbsoluta } = localizarArchivo(candidato, req.params.archivoId);
+  const { archivo } = localizarArchivo(candidato, req.params.archivoId);
 
+  if (archivo.storageKey && archivo.proveedor === 'supabase') {
+    const { url } = await urlArchivo(candidato.id, archivo.id, modo);
+    res.redirect(302, url);
+    return;
+  }
+
+  const rutaAbsoluta = rutaLocalArchivo(archivo);
   const informacion = await stat(rutaAbsoluta).catch(() => null);
   if (!informacion?.isFile()) {
     throw new ErrorHttp('El archivo ya no está disponible', 404);
   }
 
-  res.setHeader('Content-Disposition', cabeceraContenido(archivo.nombreOriginal));
+  res.setHeader('Content-Type', archivo.mimetype || 'application/octet-stream');
+  res.setHeader('Content-Disposition', cabeceraContenido(archivo.nombreOriginal, modo));
   res.sendFile(path.resolve(rutaAbsoluta), { cacheControl: true, maxAge: '5m' }, (error) => {
     if (error && !res.headersSent) {
       next(error);
     }
+  });
+};
+
+export const descargarArchivo = envolver(async (req, res, next) =>
+  servirArchivo(req, res, next, 'download'),
+);
+
+export const previsualizarArchivo = envolver(async (req, res, next) =>
+  servirArchivo(req, res, next, 'preview'),
+);
+
+export const ficha = envolver(async (req, res) => {
+  const resultado = await fichaCandidato(req.params.id);
+  res.json({ ok: true, ...resultado });
+});
+
+export const documentos = envolver(async (req, res) => {
+  const resultado = await listarDocumentos(req.query ?? {});
+  res.json({ ok: true, ...resultado });
+});
+
+export const urlDeArchivo = envolver(async (req, res) => {
+  const modo = req.query.modo === 'download' ? 'download' : 'preview';
+  const resultado = await urlArchivo(req.params.id, req.params.archivoId, modo);
+  const base = `/api/candidatos/${encodeURIComponent(req.params.id)}/archivos/${encodeURIComponent(req.params.archivoId)}`;
+  res.json({
+    ok: true,
+    url: resultado.url,
+    expiraEn: resultado.expiraEn,
+    local: resultado.local,
+    previewUrl: `${base}/preview`,
+    descargaUrl: base,
+    archivo: resultado.archivo,
   });
 });
 

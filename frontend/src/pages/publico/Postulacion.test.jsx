@@ -39,9 +39,9 @@ const CANDIDATO = {
   estado: 'Pendiente',
 };
 
-function renderizar(ruta = '/postulacion') {
+function renderizar() {
   render(
-    <MemoryRouter initialEntries={[ruta]}>
+    <MemoryRouter>
       <Postulacion />
     </MemoryRouter>,
   );
@@ -126,20 +126,5 @@ describe('Postulación pública', () => {
     expect(await screen.findByText('¡Postulación registrada!')).toBeInTheDocument();
     expect(screen.getByText('AQ-2026-ABCD1234')).toBeInTheDocument();
     expect(mocks.apiPost).toHaveBeenCalledWith('/postulaciones', expect.any(FormData));
-  });
-
-  it('incluye la oferta seleccionada al enviar el formulario multipart', async () => {
-    const user = userEvent.setup();
-    mocks.apiPost.mockResolvedValue({ candidato: CANDIDATO });
-    renderizar('/postulacion?oferta_id=oferta-42&cargo=Monitor%20Producci%C3%B3n&familiaCargo=T%C3%A9cnico%20B%2FC');
-    await screen.findByLabelText('Familia de cargo');
-    await completarFormulario(user);
-    await user.click(screen.getByRole('button', { name: /enviar postulaci/i }));
-    await screen.findByRole('heading', { name: /postulación registrada/i });
-    const formData = mocks.apiPost.mock.calls[0][1];
-    expect(formData).toBeInstanceOf(FormData);
-    expect(formData.get('oferta_id')).toBe('oferta-42');
-    expect(formData.get('cargo')).toBe(CANDIDATO.cargo);
-    expect(formData.get('cv')).toBeInstanceOf(File);
   });
 });

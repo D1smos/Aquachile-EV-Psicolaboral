@@ -1,194 +1,173 @@
-# AquaChile - Sistema de Evaluación Psicolaboral
+# Sistema de Evaluación Psicolaboral - AquaChile
 
-## Descripción
+## Equipo de Desarrollo
+* **Vicente Krausse / David Soto**
+  * **Vicente Krausse**: Desarrollo del frontend, componentes React, validaciones, estilos, experiencia de usuario y pruebas con Vitest.
+  * **David Soto**: Desarrollo del backend, API REST, persistencia SQLite/PostgreSQL, autenticación y seguridad.
 
-Proyecto académico desarrollado para la asignatura Desarrollo Full Stack II
-(DSY1104), basado en una problemática real presentada por AquaChile.
+## Descripción del Proyecto
+Plataforma web corporativa diseñada para la gestión integral, seguimiento y análisis de las evaluaciones psicolaborales de los candidatos en los procesos de selección de AquaChile.
 
-El proyecto busca desarrollar un MVP web que permita centralizar la gestión
-de candidatos, solicitudes y evaluaciones psicolaborales.
+El sistema centraliza la información de los postulantes y digitaliza el proceso de evaluación psicológica. Permite a los reclutadores y psicólogos del área de Recursos Humanos administrar perfiles, registrar resultados de pruebas y generar informes estructurados para la toma de decisiones.
 
-Actualmente, parte de este proceso se realiza utilizando diferentes
-herramientas y registros, lo que provoca dispersión de información,
-seguimiento manual y tareas repetitivas.
+El MVP se compone de una zona pública para postulantes y una zona privada para el equipo interno, con roles diferenciados para Analista y Evaluador/Psicólogo.
 
-La aplicación busca concentrar el flujo principal dentro de una única
-plataforma web.
+## Tecnologías Utilizadas
+* **Frontend**: React 18, Vite 5, React Router 6, Bootstrap 5 y Bootstrap Icons.
+* **Backend**: Node.js 24, Express, JWT, bcryptjs, Multer y Nodemailer.
+* **Base de datos**: SQLite local con `node:sqlite` o PostgreSQL/Supabase mediante `DATABASE_URL`.
+* **Almacenamiento**: disco local o Supabase Storage con bucket privado, URLs firmadas y deduplicación por SHA-256.
+* **Pruebas**: `node:test` en backend y Vitest + Testing Library + jsdom en frontend.
 
----
+## Estructura del Repositorio
+* `/frontend`: Contiene el código fuente de la aplicación cliente, componentes React, vistas, contextos y pruebas Vitest.
+* `/backend`: Contiene la lógica del servidor, API REST, servicios, validadores y configuración de base de datos.
+  * `src/services/almacenamiento/`: adaptadores local y Supabase Storage.
+  * `src/scripts/migrar-archivos-storage.js`: migración idempotente de archivos existentes.
+* `/docs`: Contiene el ERS y la documentación de apoyo del proyecto.
+* `/scripts`: Contiene el script de verificación del entorno.
+* `SETUP.md`: Guía detallada de instalación, variables de entorno y solución de problemas.
+* `.gitignore`: Configuración de exclusión de archivos temporales, dependencias, variables de entorno y cargas.
 
-## Objetivo
+## Módulos Principales
+* **Autenticación y Autorización**: Acceso seguro para reclutadores y psicólogos evaluadores mediante JWT y roles.
+* **Dashboard de Gestión**: Panel de control con métricas de candidatos, postulaciones, evaluaciones completadas y aprobados.
+* **Gestión de Candidatos**: Tabla centralizada con búsqueda, filtros, orden, paginación y estado del proceso.
+* **Ficha Técnica**: Vista propia por candidato con datos, evaluación, documentos e historial; permite imprimir, descargar PDF y compartir solo dentro del equipo interno.
+* **Sección de Documentos**: Búsqueda centralizada de CV y antecedentes por candidato, folio o archivo, con filtros, paginación y acciones de ver/descargar.
+* **Postulación Pública**: Formulario validado con carga de CV, generación de folio y aceptación de privacidad.
+* **Consulta Pública**: Seguimiento del estado de la postulación mediante folio y RUT, sin exponer datos sensibles.
+* **Evaluación Psicolaboral**: Cuestionario de 10 preguntas en 4 dimensiones, cálculo de puntaje e idoneidad.
+* **Apoyo Automático**: Análisis de afinidad entre el CV y el cargo postulado.
+* **Historial de Etapas**: Registro de cambios de estado y responsables del proceso.
+* **Generación de Informes**: Exportación CSV y ficha individual en PDF.
+* **Notificaciones por Correo**: Confirmación de postulación y aviso de aprobación cuando SMTP está configurado.
 
-Desarrollar una aplicación Full Stack que permita:
+## Requisitos Previos
+Para la ejecución del proyecto en un entorno local se requiere:
 
-- Registrar candidatos.
-- Gestionar solicitudes de evaluación psicolaboral.
-- Registrar cargos y familias de cargo.
-- Asignar responsables.
-- Gestionar estados de las solicitudes.
-- Registrar evaluaciones y observaciones.
-- Consultar candidatos y evaluaciones.
-- Visualizar métricas mediante un Dashboard.
-- Mantener los datos de forma persistente mediante una base de datos.
+* Node.js 24 o superior. El backend utiliza el módulo nativo `node:sqlite`.
+* npm, incluido con Node.js.
+* Git.
 
----
+## Instrucciones de Instalación y Ejecución Local
+1. Clonar el repositorio y acceder al directorio raíz del proyecto:
+   ```bash
+   git clone https://github.com/D1smos/Aquachile-EV-Psicolaboral.git
+   cd Aquachile-EV-Psicolaboral
+   ```
 
-## Flujo general
+2. Instalar las dependencias de backend y frontend:
+   ```bash
+   npm run setup
+   ```
 
-Candidato
-↓
-Postulación
-↓
-Registro de candidato
-↓
-Solicitud de evaluación
-↓
-Asignación de evaluador
-↓
-Evaluación psicolaboral
-↓
-Actualización de estado
-↓
-Resultado / observaciones
-↓
-Finalización
+3. Crear los archivos de entorno:
+   ```bash
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
 
-Estados principales:
+   En Windows PowerShell:
+   ```powershell
+   copy backend\.env.example backend\.env
+   copy frontend\.env.example frontend\.env
+   ```
 
-- Pendiente
-- En proceso
-- Finalizada
+4. Completar en `backend/.env` las variables obligatorias:
+   ```env
+   JWT_SECRET=una_clave_larga_y_segura
+   EVALUADOR_PASSWORD=clave_del_evaluador
+   ANALISTA_PASSWORD=clave_del_analista
+   SEED_DEMO=true
+   ```
 
----
+5. Verificar el entorno:
+   ```bash
+   npm run verificar
+   ```
 
-## Tecnologías
+6. Iniciar backend y frontend en dos terminales:
+   ```bash
+   npm run dev:backend
+   npm run dev:frontend
+   ```
 
-### Frontend
+7. Abrir la aplicación:
+   * Frontend: <http://127.0.0.1:5173>
+   * API: <http://127.0.0.1:5000>
 
-- React
-- Vite
-- React Router
-- Bootstrap 5
-- JavaScript
+La guía completa de variables, base de datos, SMTP, modo producción y solución de problemas está en [`SETUP.md`](SETUP.md).
 
-### Backend
+## Cuentas de Demostración
+Las cuentas se crean en el primer arranque con los valores definidos en `backend/.env`.
 
-- Node.js
-- Express
-- API REST
+| Rol | Correo | Permisos principales |
+|---|---|---|
+| Evaluador (`psicologo`) | `evaluador@aquachile.cl` | Crear, editar, evaluar, cambiar estado, eliminar y exportar |
+| Analista | `analista@aquachile.cl` | Ver, filtrar, descargar documentos y exportar; sin edición ni evaluación |
 
-### Base de datos
+Las contraseñas se configuran en `backend/.env` mediante `EVALUADOR_PASSWORD` y `ANALISTA_PASSWORD`. No se versionan en el repositorio.
 
-- PostgreSQL (en implementación)
+## Scripts Disponibles
+| Comando | Descripción |
+|---|---|
+| `npm run setup` | Instala dependencias de backend y frontend |
+| `npm run dev:backend` | Inicia la API en modo desarrollo |
+| `npm run dev:frontend` | Inicia Vite en modo desarrollo |
+| `npm run build` | Compila el frontend para producción |
+| `npm start` | Inicia el backend; puede servir el frontend con `SERVE_FRONTEND=true` |
+| `npm run lint` | Ejecuta ESLint sobre el frontend |
+| `npm test` | Ejecuta las pruebas de backend y frontend |
+| `npm run test:coverage` | Ejecuta Vitest con cobertura del frontend |
+| `npm run verificar` | Verifica Node, entornos, dependencias y puerto |
+| `npm run demo:reset` | Restaura la base local con datos ficticios |
 
-### Testing
+## Pruebas Automatizadas
+* **Backend**: pruebas de API, autenticación, permisos, postulaciones, evaluación, correo y validadores con `node:test`.
+* **Frontend**: pruebas de utilidades, validaciones y componentes con **Vitest + Testing Library + jsdom**. No se utiliza Karma ni Jasmine.
+* **Cobertura**: el reporte HTML del frontend se genera en `frontend/cobertura/`.
 
-- Jasmine
-- Karma
-
----
-
-## Arquitectura
-
-Frontend React
-↓
-API REST
-↓
-Backend Node.js / Express
-↓
-PostgreSQL
-
----
-
-## Integrantes y responsabilidades
-
-### Vicente - Frontend y UX
-
-Responsabilidades principales:
-
-- Desarrollo de interfaces con React.
-- Diseño responsive con Bootstrap.
-- Componentes reutilizables.
-- Navegación con React Router.
-- Formularios y validaciones del cliente.
-- Consumo de la API REST.
-- Manejo de estados y feedback visual.
-- Desarrollo de Dashboard.
-- Vistas de candidatos, solicitudes y evaluaciones.
-- Pruebas de interfaz y usabilidad.
-
-### David - Backend, Base de Datos y lógica
-
-Responsabilidades principales:
-
-- Desarrollo del servidor Node.js / Express.
-- Diseño del modelo de datos.
-- Implementación de PostgreSQL.
-- Desarrollo de endpoints REST.
-- Validaciones del servidor.
-- Persistencia de candidatos, solicitudes y evaluaciones.
-- Sistema de autenticación.
-- Manejo de usuarios y roles.
-- Seguridad básica de la aplicación.
-- Pruebas de endpoints.
-- Integración Backend - Base de Datos.
-- Apoyo en despliegue.
-
-### Trabajo conjunto
-
-- Levantamiento y revisión de requerimientos.
-- Integración Frontend / Backend.
-- Testing.
-- Documentación.
-- GitHub.
-- Preparación de presentación y entrega.
-
----
-
-## Estado actual
-
-### Implementado
-
-- [x] Proyecto React con Vite
-- [x] Bootstrap
-- [x] React Router
-- [x] Página pública
-- [x] Formulario de postulación
-- [x] Validaciones básicas
-- [x] Dashboard
-- [x] Estructura inicial de Backend
-- [x] Login inicial
-- [x] Rutas protegidas
-- [x] Datos simulados
-- [x] Pruebas unitarias frontend iniciales
-
-### En desarrollo
-
-- [ ] Base de datos PostgreSQL
-- [ ] Persistencia real
-- [ ] CRUD completo de candidatos
-- [ ] CRUD de solicitudes
-- [ ] Gestión persistente de evaluaciones
-- [ ] Autenticación conectada al Backend
-- [ ] Roles de usuario
-- [ ] Integración completa Frontend / API
-- [ ] Manejo de errores
-- [ ] Despliegue
-
-### Futuras mejoras
-
-- [ ] Chatbot de ayuda
-- [ ] Integración opcional con IA
-- [ ] Reportes
-- [ ] Métricas avanzadas
-
----
-
-## Ejecución del proyecto
-
-### Frontend
-
+Comandos:
 ```bash
-cd frontend
-npm install
-npm run dev
+npm test
+npm test --prefix backend
+npm test --prefix frontend
+npm run test:coverage --prefix frontend
+npm run test:cobertura --prefix backend
+```
+
+Actualmente la suite suma **39 pruebas de backend** y **52 pruebas de frontend**, con **91 pruebas aprobadas**. La cobertura frontend es de **57,85% de líneas**, con **95,04% en utilidades**, **91,83% en Postulación** y **57,74% en Dashboard**.
+
+La evidencia detallada de casos, resultados y cobertura está en [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md).
+
+## Roles y Permisos
+| Acción | Analista | Evaluador |
+|---|---|---|
+| Ver candidatos y métricas | Sí | Sí |
+| Filtrar, buscar y exportar | Sí | Sí |
+| Descargar CV, antecedentes e informe PDF | Sí | Sí |
+| Ver historial | Sí | Sí |
+| Crear o editar candidatos | No | Sí |
+| Evaluar psicolaboralmente | No | Sí |
+| Cambiar estado | No | Sí |
+| Eliminar candidatos | No | Sí |
+
+## Datos y Privacidad
+* Los datos de demostración son ficticios.
+* No se deben subir CV reales al repositorio.
+* `backend/.env`, `frontend/.env`, `backend/data/` y `backend/uploads/` están excluidos por `.gitignore`.
+* La consulta pública solo devuelve información mínima del proceso.
+* El apoyo automático es una ayuda para el evaluador y no reemplaza su revisión profesional.
+
+## Documentación
+* [`SETUP.md`](SETUP.md): instalación, entornos, base de datos y solución de problemas.
+* [`docs/ERS_EP2.md`](docs/ERS_EP2.md): especificación de requisitos de la EP2.
+* [`docs/Evidencia_Vitest_EP2.md`](docs/Evidencia_Vitest_EP2.md): casos, resultados y cobertura.
+
+## Estado del Proyecto
+La EP2 entrega el frontend React integrado con backend, autenticación, persistencia dual, almacenamiento local o Supabase Storage y pruebas automatizadas. Quedan para la etapa final:
+
+* Despliegue público en producción.
+* Ampliación de pruebas sobre modales y pantallas secundarias.
+* Mejoras de accesibilidad y observabilidad.

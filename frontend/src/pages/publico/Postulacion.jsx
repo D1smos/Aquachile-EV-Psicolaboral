@@ -21,7 +21,6 @@ const FORM_INICIAL = {
   disponibilidad: '',
   aniosExperiencia: '',
   motivacion: '',
-  oferta_id: '',
   aceptaPrivacidad: false,
 };
 

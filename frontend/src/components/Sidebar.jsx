@@ -8,7 +8,6 @@ const SECCIONES = [
   { id: 'resumen', etiqueta: 'Resumen', icono: 'bi-grid-1x2-fill' },
   { id: 'metricas', etiqueta: 'Métricas', icono: 'bi-bar-chart-line-fill' },
   { id: 'candidatos', etiqueta: 'Candidatos', icono: 'bi-people-fill' },
-  { id: 'ofertas-admin', etiqueta: 'Gestión de Ofertas', icono: 'bi-briefcase-fill' },
 ];
 
 const inicialesDe = (nombre) =>
@@ -32,17 +31,14 @@ export default function Sidebar({ abierto = false, onCerrar }) {
     const actualizar = () => {
       const metricas = document.getElementById('metricas');
       const candidatos = document.getElementById('candidatos');
-      const ofertas = document.getElementById('ofertas-admin');
-      if (!metricas && !candidatos && !ofertas) {
+      if (!metricas && !candidatos) {
         return;
       }
 
       const limite = window.scrollY + Math.min(96, window.innerHeight * 0.12);
       const inicioDe = (elemento) => elemento.getBoundingClientRect().top + window.scrollY;
 
-      if (ofertas && limite >= inicioDe(ofertas) - 24) {
-        setActiva('ofertas-admin');
-      } else if (candidatos && limite >= inicioDe(candidatos) - 24) {
+      if (candidatos && limite >= inicioDe(candidatos) - 24) {
         setActiva('candidatos');
       } else if (metricas && limite >= inicioDe(metricas) - 24) {
         setActiva('metricas');
@@ -103,7 +99,7 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       <p className="menu-etiqueta">Panel interno</p>
 
       <nav className="menu-nav" aria-label="Secciones del panel">
-        {SECCIONES.filter((seccion) => seccion.id !== 'ofertas-admin' || usuario?.rol === 'psicologo').map((seccion) => (
+        {SECCIONES.map((seccion) => (
           <button
             key={seccion.id}
             type="button"
@@ -118,6 +114,14 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       </nav>
 
       <div className="menu-secundario">
+        <Link to="/agenda" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+          <i className="bi bi-calendar2-week" aria-hidden="true" />
+          <span>Agenda</span>
+        </Link>
+        <Link to="/documentos" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+          <i className="bi bi-folder2-open" aria-hidden="true" />
+          <span>Documentos</span>
+        </Link>
         <Link to="/" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
           <i className="bi bi-globe2" aria-hidden="true" />
           <span>Sitio público</span>

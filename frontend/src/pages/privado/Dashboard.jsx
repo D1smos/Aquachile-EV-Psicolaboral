@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -8,6 +9,7 @@ import {
   formatearPorcentaje,
   ordenarCandidatos,
 } from '../../utils/evaluacionUtils.js';
+import { construirConsultaCandidatos } from '../../utils/candidatos.js';
 import FiltrosCandidatos from '../../components/FiltrosCandidatos.jsx';
 import TablaCandidatos from '../../components/TablaCandidatos.jsx';
 import TarjetaMetrica from '../../components/TarjetaMetrica.jsx';
@@ -30,7 +32,15 @@ const sincronizarSeguimientoLocal = (candidatoActualizado) => {
   }
 };
 
-const FILTROS_INICIALES = { busqueda: '', cargo: '', estado: '', desde: '', hasta: '' };
+const FILTROS_INICIALES = {
+  busqueda: '',
+  cargo: '',
+  estado: '',
+  desde: '',
+  hasta: '',
+  minExperiencia: '',
+  palabrasClave: '',
+};
 const POR_PAGINA = 8;
 
 function Esqueleto() {
@@ -58,6 +68,7 @@ function ErrorCarga({ mensaje, onReintentar }) {
 export default function Dashboard() {
   const { mostrarToast } = useToast();
   const { usuario } = useAuth();
+  const navegar = useNavigate();
   const puedeEvaluar = usuario?.rol === 'psicologo';
   const [candidatos, setCandidatos] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
@@ -95,16 +106,39 @@ export default function Dashboard() {
     cargar();
   }, [cargar]);
 
+  const consultaCandidatos = useMemo(
+    () => construirConsultaCandidatos(filtros),
+    [filtros],
+  );
+  const ultimaConsulta = useRef(consultaCandidatos);
+
   const refrescar = useCallback(async () => {
     try {
-      const datos = await api.get('/candidatos');
+      const datos = await api.get(consultaCandidatos);
       setCandidatos(datos.candidatos);
     } catch (capturado) {
       if (capturado.codigo === 401) {
         setError(capturado.message);
       }
     }
-  }, []);
+  }, [consultaCandidatos]);
+
+  useEffect(() => {
+    if (ultimaConsulta.current === consultaCandidatos) {
+      return undefined;
+    }
+    ultimaConsulta.current = consultaCandidatos;
+    const temporizador = window.setTimeout(async () => {
+      try {
+        const datos = await api.get(consultaCandidatos);
+        setCandidatos(datos.candidatos);
+        setError(null);
+      } catch (capturado) {
+        setError(capturado.message);
+      }
+    }, 250);
+    return () => window.clearTimeout(temporizador);
+  }, [consultaCandidatos]);
 
   useEffect(() => {
     const alVolver = () => {
@@ -279,6 +313,13 @@ export default function Dashboard() {
           <button type="button" className="boton boton-secundario" onClick={descargarCsv}>
             <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" /> Exportar CSV
           </button>
+          <button
+            type="button"
+            className="boton boton-secundario"
+            onClick={() => navegar('/documentos')}
+          >
+            <i className="bi bi-folder2-open" aria-hidden="true" /> Documentos
+          </button>
           <button type="button" className="boton boton-secundario" onClick={cargar} disabled={cargando}>
             <i className="bi bi-arrow-clockwise" aria-hidden="true" /> Actualizar
           </button>
@@ -353,6 +394,7 @@ export default function Dashboard() {
               onEditar={setEditando}
               onInforme={descargarInforme}
               onEliminar={eliminarCandidato}
+              onFicha={(candidato) => navegar(`/candidatos/${candidato.id}/ficha`)}
               puedeEvaluar={puedeEvaluar}
             />
             {totalPaginas > 1 && (

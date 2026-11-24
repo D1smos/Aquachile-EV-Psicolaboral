@@ -9,6 +9,9 @@ import Privacidad from './pages/publico/Privacidad.jsx';
 import NoEncontrado from './pages/publico/NoEncontrado.jsx';
 import Login from './pages/privado/Login.jsx';
 import Dashboard from './pages/privado/Dashboard.jsx';
+import FichaCandidato from './pages/privado/FichaCandidato.jsx';
+import Documentos from './pages/privado/Documentos.jsx';
+import Agenda from './pages/privado/Agenda.jsx';
 
 export default function App() {
   return (
@@ -25,6 +28,30 @@ export default function App() {
           element={
             <RutaProtegida>
               <Dashboard />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/candidatos/:id/ficha"
+          element={
+            <RutaProtegida>
+              <FichaCandidato />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/documentos"
+          element={
+            <RutaProtegida>
+              <Documentos />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/agenda"
+          element={
+            <RutaProtegida>
+              <Agenda />
             </RutaProtegida>
           }
         />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import EstadoBadge from './EstadoBadge.jsx';
 import { formatearFecha, formatearPorcentaje } from '../utils/evaluacionUtils.js';
+import { palabrasClaveDeCandidato } from '../utils/candidatos.js';
 
 function Vacio({ hayFiltros, onLimpiar }) {
   return (
@@ -18,7 +19,7 @@ function Vacio({ hayFiltros, onLimpiar }) {
   );
 }
 
-export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onEvaluar, onHistorial, onEditar, onInforme, onEliminar, puedeEvaluar }) {
+export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onEvaluar, onHistorial, onEditar, onInforme, onEliminar, onFicha, puedeEvaluar }) {
   const [confirmando, setConfirmando] = useState(null);
   const temporizador = useRef(null);
 
@@ -66,7 +67,9 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
           {candidatos.length === 0 ? (
             <Vacio hayFiltros={hayFiltros} onLimpiar={onLimpiar} />
           ) : (
-            candidatos.map((candidato) => (
+            candidatos.map((candidato) => {
+              const palabrasClave = palabrasClaveDeCandidato(candidato);
+              return (
               <tr key={candidato.id}>
                 <td>
                   <div className="candidato-celda">
@@ -74,6 +77,19 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
                     <small>
                       {candidato.rut} · {candidato.correo}
                     </small>
+                    <small className="candidato-experiencia">
+                      <i className="bi bi-briefcase" aria-hidden="true" />{' '}
+                      {Number(candidato.aniosExperiencia) || 0} años de experiencia
+                    </small>
+                    {palabrasClave.length > 0 && (
+                      <div className="analisis-ia-chips">
+                        {palabrasClave.map((palabra) => (
+                          <span className="chip chip-ok" key={palabra}>
+                            {palabra}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <small className="d-md-none">
                       {candidato.cargo} · {formatearFecha(candidato.fechaPostulacion)}
                     </small>
@@ -128,6 +144,18 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
                         <span className="accion-etiqueta">Editar</span>
                       </button>
                     )}
+                    {onFicha && (
+                      <button
+                        type="button"
+                        className="boton boton-secundario boton-sm boton-accion"
+                        onClick={() => onFicha(candidato)}
+                        title="Abrir ficha técnica en ventana propia"
+                        aria-label="Abrir ficha técnica"
+                      >
+                        <i className="bi bi-person-vcard" aria-hidden="true" />
+                        <span className="accion-etiqueta">Ficha</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="boton boton-secundario boton-sm boton-accion"
@@ -168,7 +196,8 @@ export default function TablaCandidatos({ candidatos, hayFiltros, onLimpiar, onE
                   </div>
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>

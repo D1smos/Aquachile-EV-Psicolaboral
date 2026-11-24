@@ -37,9 +37,6 @@ export default function Navbar() {
           <NavLink to="/" end className="enlace-nav" onClick={cerrarMenu}>
             Inicio
           </NavLink>
-          <NavLink to="/ofertas" className="enlace-nav" onClick={cerrarMenu}>
-            Ofertas
-          </NavLink>
           <NavLink to="/postulacion" className="enlace-nav" onClick={cerrarMenu}>
             Postulación
           </NavLink>
@@ -51,6 +48,9 @@ export default function Navbar() {
             <>
               <NavLink to="/dashboard" className="enlace-nav" onClick={cerrarMenu}>
                 Dashboard
+              </NavLink>
+              <NavLink to="/documentos" className="enlace-nav" onClick={cerrarMenu}>
+                Documentos
               </NavLink>
               <button
                 type="button"

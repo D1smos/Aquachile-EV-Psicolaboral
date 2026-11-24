@@ -1,5 +1,6 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dashboard from './Dashboard.jsx';
 
@@ -10,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   apiPatch: vi.fn(),
   apiEliminar: vi.fn(),
   apiDescargar: vi.fn(),
-  apiDescargarCv: vi.fn(),
   mostrarToast: vi.fn(),
 }));
 
@@ -21,7 +21,6 @@ vi.mock('../../services/api.js', () => ({
     patch: mocks.apiPatch,
     eliminar: mocks.apiEliminar,
     descargar: mocks.apiDescargar,
-    descargarCv: mocks.apiDescargarCv,
   },
 }));
 
@@ -34,6 +33,13 @@ vi.mock('../../context/ToastContext.jsx', () => ({
 }));
 
 const fecha = new Date().toISOString();
+
+const renderDashboard = () =>
+  render(
+    <MemoryRouter>
+      <Dashboard />
+    </MemoryRouter>,
+  );
 
 const CANDIDATOS = [
   {
@@ -100,7 +106,7 @@ const CUESTIONARIO = {
 };
 
 function respuestaOk(ruta) {
-  if (ruta === '/candidatos') {
+  if (ruta.startsWith('/candidatos')) {
     return Promise.resolve({ candidatos: CANDIDATOS });
   }
   if (ruta === '/catalogos') {
@@ -121,7 +127,6 @@ describe('Dashboard', () => {
     mocks.apiPatch.mockReset();
     mocks.apiEliminar.mockReset();
     mocks.apiDescargar.mockReset();
-    mocks.apiDescargarCv.mockReset();
     mocks.mostrarToast.mockReset();
     localStorage.clear();
   });
@@ -131,7 +136,7 @@ describe('Dashboard', () => {
   });
 
   it('muestra las métricas y los candidatos', async () => {
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
 
@@ -143,7 +148,7 @@ describe('Dashboard', () => {
 
   it('filtra por nombre sin distinguir tildes', async () => {
     const user = userEvent.setup();
-    render(<Dashboard />);
+    renderDashboard();
 
     const buscador = await screen.findByLabelText('Nombre, RUT o correo');
     await user.type(buscador, 'maria');
@@ -153,17 +158,37 @@ describe('Dashboard', () => {
     expect(screen.getByText('1 candidato')).toBeInTheDocument();
   });
 
+  it('envía los filtros de experiencia y palabras clave al servidor', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await screen.findByText('Ana Pérez');
+    await user.type(screen.getByLabelText('Años de experiencia mínimos'), '3');
+
+    await waitFor(() =>
+      expect(mocks.apiGet).toHaveBeenCalledWith('/candidatos?minExperiencia=3'),
+    );
+
+    await user.type(screen.getByLabelText('Palabras clave (separadas por coma)'), 'python');
+
+    await waitFor(() =>
+      expect(mocks.apiGet).toHaveBeenCalledWith(
+        '/candidatos?minExperiencia=3&palabrasClave=python',
+      ),
+    );
+  });
+
   it('muestra un mensaje cuando falla la carga', async () => {
     mocks.apiGet.mockRejectedValue(new Error('No se pudo cargar el panel'));
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('No se pudo cargar el panel')).toBeInTheDocument();
   });
 
   it('oculta las acciones de edición para el analista', async () => {
     mocks.rol = 'analista';
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
     expect(screen.queryByText('Nuevo candidato')).not.toBeInTheDocument();

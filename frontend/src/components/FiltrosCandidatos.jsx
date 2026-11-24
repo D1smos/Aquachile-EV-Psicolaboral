@@ -75,6 +75,39 @@ export default function FiltrosCandidatos({ filtros, onCambiar, cargos = [], est
         </div>
 
         <div className="campo-filtro">
+          <label className="etiqueta-campo" htmlFor="filtro-experiencia">
+            Años de experiencia mínimos
+          </label>
+          <input
+            id="filtro-experiencia"
+            name="minExperiencia"
+            type="number"
+            min="0"
+            max="60"
+            className="control-campo"
+            placeholder="Ej. 3"
+            value={filtros.minExperiencia ?? ''}
+            onChange={modificar}
+          />
+        </div>
+
+        <div className="campo-filtro">
+          <label className="etiqueta-campo" htmlFor="filtro-palabras">
+            Palabras clave (separadas por coma)
+          </label>
+          <input
+            id="filtro-palabras"
+            name="palabrasClave"
+            type="text"
+            maxLength={200}
+            className="control-campo"
+            placeholder="Ej. python, sql"
+            value={filtros.palabrasClave ?? ''}
+            onChange={modificar}
+          />
+        </div>
+
+        <div className="campo-filtro">
           <label className="etiqueta-campo" htmlFor="filtro-desde">
             Postulado desde
           </label>

@@ -19,7 +19,10 @@ const claseTemaRol = (rol) => {
 export default function AppLayout() {
   const { pathname } = useLocation();
   const { usuario } = useAuth();
-  const privada = pathname.startsWith('/dashboard');
+  const privada =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/documentos') ||
+    pathname.startsWith('/candidatos/');
   const temaRol = claseTemaRol(usuario?.rol);
   const [menuAbierto, setMenuAbierto] = useState(false);
 

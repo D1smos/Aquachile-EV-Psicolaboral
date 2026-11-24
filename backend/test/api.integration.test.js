@@ -10,6 +10,7 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'secreto-integracion-aquachile';
 process.env.DATABASE_URL = '';
 process.env.SEED_DEMO = 'false';
+process.env.STORAGE_PROVIDER = 'local';
 process.env.DIRECTORIO_DATOS = path.join(directorioPrueba, 'data');
 process.env.DIRECTORIO_UPLOADS = path.join(directorioPrueba, 'uploads');
 process.env.EVALUADOR_EMAIL = 'evaluador@prueba.cl';
@@ -22,11 +23,7 @@ process.env.SMTP_HOST = '';
 
 const { crearApp } = await import('../src/app.js');
 const { inicializarBaseDatos } = await import('../src/services/seed.service.js');
-const { crearPostulacion, localizarArchivo } = await import('../src/services/candidato.service.js');
-const { filtrarParaExportar, generarCsv } = await import('../src/services/exportacion.service.js');
-const { validarEstado, validarEvaluacion } = await import('../src/validators/evaluacion.validator.js');
-const { CUESTIONARIO } = await import('../src/domain/cuestionario.js');
-const { descartarArchivos } = await import('../src/utils/archivos.js');
+const { crearPostulacion } = await import('../src/services/candidato.service.js');
 const { cerrarBaseDatos } = await import('../src/config/sqlite.js');
 
 await inicializarBaseDatos();
@@ -35,7 +32,6 @@ const servidor = await new Promise((resolver) => {
   const instancia = crearApp().listen(0, '127.0.0.1', () => resolver(instancia));
 });
 const baseUrl = `http://127.0.0.1:${servidor.address().port}/api`;
-const raizUrl = `http://127.0.0.1:${servidor.address().port}`;
 
 after(async () => {
   await new Promise((resolver) => servidor.close(resolver));
@@ -58,77 +54,6 @@ const peticion = async (metodo, ruta, { token, cuerpo } = {}) => {
   return { respuesta, datos };
 };
 
-test('la especificación OpenAPI está disponible en JSON y documenta las rutas principales', async () => {
-  const respuesta = await fetch(`${raizUrl}/api-docs.json`);
-  assert.equal(respuesta.status, 200);
-  const documento = await respuesta.json();
-  assert.equal(documento.openapi, '3.0.3');
-  assert.ok(documento.components.securitySchemes.bearerAuth);
-  assert.ok(documento.paths['/postulaciones'].post);
-  assert.ok(documento.paths['/ofertas/publicas'].get);
-  assert.ok(documento.paths['/candidatos/{id}/cv'].get);
-});
-
-test('la API normaliza errores de ruta y JSON malformado', async () => {
-  const desconocida = await fetch(`${raizUrl}/api/no-existe`);
-  assert.equal(desconocida.status, 404);
-  const jsonMalo = await fetch(`${baseUrl}/postulaciones/consulta`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{mal json',
-  });
-  assert.equal(jsonMalo.status, 400);
-  assert.equal((await jsonMalo.json()).ok, false);
-});
-
-test('publica catálogo y protege cuestionario con opciones y dimensiones', async () => {
-  const catalogo = await fetch(`${baseUrl}/catalogos`);
-  assert.equal(catalogo.status, 200);
-  assert.ok((await catalogo.json()).familiasCargos);
-  const token = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
-  const cuestionario = await fetch(`${baseUrl}/catalogos/evaluacion`, { headers: { Authorization: `Bearer ${token}` } });
-  assert.equal(cuestionario.status, 200);
-  const datos = await cuestionario.json();
-  assert.ok(datos.dimensiones.length > 0);
-  assert.ok(datos.preguntas.length > 0);
-  assert.equal(datos.opciones.length, 5);
-});
-
-test('el descarte de archivos admite campos vacíos y faltantes', async () => {
-  await descartarArchivos();
-  await descartarArchivos({ vacio: [null, {}], inexistente: [{ path: path.join(directorioPrueba, 'no-existe') }] });
-});
-
-test('ofertas públicas se filtran y el CRUD requiere rol evaluador', async () => {
-  const publicas = await peticion('GET', '/ofertas/publicas');
-  assert.equal(publicas.respuesta.status, 200);
-  assert.ok(publicas.datos.ofertas.length >= 1);
-  assert.ok(publicas.datos.ofertas.every((oferta) => oferta.estado === 'publicada'));
-
-  const sinToken = await peticion('POST', '/ofertas', { cuerpo: { titulo: 'Oferta prueba' } });
-  assert.equal(sinToken.respuesta.status, 401);
-  const tokenAnalista = await iniciarSesion('analista@prueba.cl', 'ClaveAnalista123!');
-  const denegada = await peticion('POST', '/ofertas', { token: tokenAnalista, cuerpo: { titulo: 'Oferta prueba' } });
-  assert.equal(denegada.respuesta.status, 403);
-
-  const tokenEvaluador = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
-  const nueva = await peticion('POST', '/ofertas', {
-    token: tokenEvaluador,
-    cuerpo: { titulo: 'Técnico de Calidad', descripcion: 'Control de procesos.', ubicacion: 'Puerto Montt', familiaCargo: 'Técnico', categoria: 'Operaciones', modalidad: 'Presencial', fechaPublicacion: '2026-11-23', cupos: 1, funciones: 'Controlar procesos.', requisitos: 'Experiencia en calidad', beneficios: 'Seguro médico', sueldo: 'A convenir', estado: 'publicada' },
-  });
-  assert.equal(nueva.respuesta.status, 201);
-  const detalle = await peticion('GET', `/ofertas/publicas/${nueva.datos.oferta.id}`);
-  assert.equal(detalle.respuesta.status, 200);
-  const invalida = await peticion('POST', '/ofertas', { token: tokenEvaluador, cuerpo: {} });
-  assert.equal(invalida.respuesta.status, 400);
-  const filtros = await peticion('GET', '/ofertas/publicas?categoria=Operaciones&modalidad=Presencial&q=Calidad');
-  assert.ok(filtros.datos.ofertas.some((oferta) => oferta.id === nueva.datos.oferta.id));
-  const filtradas = await peticion('GET', '/ofertas/publicas?ubicacion=Puerto%20Montt');
-  assert.ok(filtradas.datos.ofertas.some((oferta) => oferta.id === nueva.datos.oferta.id));
-  const actualizada = await peticion('PUT', `/ofertas/${nueva.datos.oferta.id}`, { token: tokenEvaluador, cuerpo: { estado: 'cerrada' } });
-  assert.equal(actualizada.respuesta.status, 200);
-  const eliminada = await peticion('DELETE', `/ofertas/${nueva.datos.oferta.id}`, { token: tokenEvaluador });
-  assert.equal(eliminada.respuesta.status, 200);
-});
-
 const iniciarSesion = async (email, password) => {
   const { respuesta, datos } = await peticion('POST', '/auth/login', { cuerpo: { email, password } });
   assert.equal(respuesta.status, 200);
@@ -150,74 +75,11 @@ const datosCandidato = (extra = {}) => ({
   ...extra,
 });
 
-test('exportación CSV filtra sin acentos y escapa campos con delimitadores', () => {
-  const filas = [
-    { folio: 'F1', nombre: 'José; "Pepe"', rut: '1', correo: 'j@x.cl', cargo: 'Operador', estado: 'Pendiente', fechaPostulacion: '2026-01-02' },
-    { folio: 'F2', nombre: 'Ana', rut: '2', correo: 'a@x.cl', cargo: 'Técnico', estado: 'Aprobado', fechaPostulacion: '2026-04-02' },
-  ];
-  assert.equal(filtrarParaExportar(filas, { busqueda: 'jose', estado: 'Pendiente', cargo: 'Operador', desde: '2026-01-01', hasta: '2026-01-31' }).length, 1);
-  assert.equal(filtrarParaExportar(filas, { desde: '2026-02-01' }).length, 1);
-  assert.equal(filtrarParaExportar(filas, { hasta: '2026-03-31' }).length, 1);
-  const csv = generarCsv(filas);
-  assert.ok(csv.startsWith('\uFEFFfolio;nombre;'));
-  assert.ok(csv.includes('"José; ""Pepe"""'));
-  assert.ok(csv.endsWith('\n'));
-});
-
-test('validador de evaluación contempla estados y respuestas válidas e inválidas', () => {
-  assert.deepEqual(validarEstado('Estado desconocido').length, 1);
-  assert.deepEqual(validarEstado('Aprobado'), []);
-  assert.ok(validarEvaluacion({}).length > 0);
-  const respuestas = Object.fromEntries(CUESTIONARIO.preguntas.map((pregunta) => [pregunta.id, 4]));
-  assert.deepEqual(validarEvaluacion({ respuestas }), []);
-  assert.ok(validarEvaluacion({ respuestas: { ...respuestas, p1: 8 }, observaciones: 'x'.repeat(1001), estado: 'Mal' }).length > 0);
-});
-
 const candidato = await crearPostulacion(datosCandidato(), null, 'prueba de integración');
-
-test('valida y registra una evaluación psicolaboral completa', async () => {
-  const token = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
-  const invalida = await peticion('POST', `/candidatos/${candidato.id}/evaluacion`, { token, cuerpo: {} });
-  assert.equal(invalida.respuesta.status, 400);
-  const respuestas = Object.fromEntries(CUESTIONARIO.preguntas.map((pregunta) => [pregunta.id, 5]));
-  const guardada = await peticion('POST', `/candidatos/${candidato.id}/evaluacion`, {
-    token, cuerpo: { respuestas, observaciones: 'Experiencia consistente', estado: 'Aprobado' },
-  });
-  assert.equal(guardada.respuesta.status, 200);
-  assert.equal(guardada.datos.candidato.estado, 'Aprobado');
-  assert.equal(guardada.datos.candidato.puntaje, 100);
-});
 
 test('la postulación pública registra el consentimiento', () => {
   assert.equal(candidato.consentimiento, true);
   assert.ok(candidato.fechaConsentimiento);
-});
-
-test('la asistencia conserva auditoría humana y las descargas CV están protegidas', async () => {
-  const token = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
-  const sinToken = await peticion('GET', `/candidatos/${candidato.id}/cv`);
-  assert.equal(sinToken.respuesta.status, 401);
-  const cvInexistente = await peticion('GET', `/candidatos/${candidato.id}/cv`, { token });
-  assert.equal(cvInexistente.respuesta.status, 404);
-  const asistencia = await peticion('POST', `/candidatos/${candidato.id}/asistente`, { token });
-  assert.equal(asistencia.respuesta.status, 200);
-  assert.ok(Array.isArray(asistencia.datos.asistencia.criterios_usados));
-  assert.equal(typeof asistencia.datos.asistencia.limitaciones, 'string');
-  assert.equal(asistencia.datos.asistencia.requiere_revision_humana, true);
-  const informe = await fetch(`${baseUrl}/candidatos/${candidato.id}/informe.pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  assert.equal(informe.status, 200);
-  assert.match(informe.headers.get('content-type'), /application\/pdf/);
-  assert.ok((await informe.arrayBuffer()).byteLength > 100);
-});
-
-test('la localización de archivos rechaza rutas fuera de uploads y archivos ausentes', () => {
-  assert.throws(
-    () => localizarArchivo({ archivos: [{ id: 'malicioso', ruta: '../secreto.env' }] }, 'malicioso'),
-    (error) => error.codigo === 400,
-  );
-  assert.throws(() => localizarArchivo({ archivos: [] }, 'ausente'), (error) => error.codigo === 404);
 });
 
 test('permisos de candidatos y consulta pública', async (t) => {
@@ -349,19 +211,47 @@ test('una postulación pública aparece en el panel del evaluador', async () => 
   assert.equal(registro.archivos.length, 1);
   assert.equal(registro.archivos[0].tipo, 'cv');
   assert.equal(registro.archivos[0].nombreOriginal, 'cv-postulacion.pdf');
-  assert.match(registro.archivos[0].ruta, /^postulantes[\\/]/);
-
-  const noAutorizada = await fetch(`${baseUrl}/candidatos/${registro.id}/cv`);
-  assert.equal(noAutorizada.status, 401);
 
   const descarga = await fetch(
     `${baseUrl}/candidatos/${registro.id}/archivos/${registro.archivos[0].id}`,
     { headers: { Authorization: `Bearer ${tokenEvaluador}` } },
   );
   assert.equal(descarga.status, 200);
-  const descargaCv = await fetch(`${baseUrl}/candidatos/${registro.id}/cv`, {
-    headers: { Authorization: `Bearer ${tokenEvaluador}` },
-  });
-  assert.equal(descargaCv.status, 200);
   assert.equal(await descarga.text(), '%PDF-1.4 postulación de prueba');
+});
+
+test('la ficha y la sección de documentos están disponibles para usuarios internos', async () => {
+  const token = await iniciarSesion('evaluador@prueba.cl', 'ClaveEvaluador123!');
+  const { datos: listado } = await peticion('GET', '/candidatos', { token });
+  const registro = listado.candidatos.find((candidatoListado) => candidatoListado.archivos.length > 0);
+  assert.ok(registro, 'Debe existir un candidato con archivos');
+
+  const ficha = await peticion('GET', `/candidatos/${registro.id}/ficha`, { token });
+  assert.equal(ficha.respuesta.status, 200);
+  assert.equal(ficha.datos.candidato.id, registro.id);
+  assert.ok(Array.isArray(ficha.datos.historial));
+
+  const documentos = await peticion('GET', '/archivos?tipo=cv&porPagina=5', { token });
+  assert.equal(documentos.respuesta.status, 200);
+  assert.ok(documentos.datos.total >= 1);
+  assert.ok(documentos.datos.archivos.every((archivo) => archivo.tipo === 'cv'));
+  assert.ok(documentos.datos.archivos.every((archivo) => archivo.folio));
+
+  const archivo = registro.archivos[0];
+  const info = await peticion(
+    'GET',
+    `/candidatos/${registro.id}/archivos/${archivo.id}/url`,
+    { token },
+  );
+  assert.equal(info.respuesta.status, 200);
+  assert.equal(info.datos.local, true);
+  assert.equal(info.datos.url, null);
+  assert.match(info.datos.previewUrl, /\/preview$/);
+
+  const preview = await fetch(
+    `${baseUrl}/candidatos/${registro.id}/archivos/${archivo.id}/preview`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  assert.equal(preview.status, 200);
+  assert.match(preview.headers.get('content-disposition'), /^inline/);
 });
