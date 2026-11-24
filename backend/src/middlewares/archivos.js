@@ -20,9 +20,14 @@ const MIME_ANTECEDENTES = new Set([
 
 const MAXIMO_ARCHIVOS = 5;
 
+const nombreCarpetaPostulante = (nombre) => String(nombre ?? 'postulante')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'postulante';
+
 const almacenamiento = multer.diskStorage({
   destination: (req, file, callback) => {
-    const carpeta = path.join(entorno.directorios.uploads, file.fieldname);
+    req.carpetaPostulante ??= `${nombreCarpetaPostulante(req.body?.nombre)}_${crypto.randomUUID()}`;
+    const carpeta = path.join(entorno.directorios.uploads, 'postulantes', req.carpetaPostulante);
     mkdirSync(carpeta, { recursive: true });
     callback(null, carpeta);
   },

@@ -15,6 +15,8 @@ const COLUMNAS_CANDIDATO = [
   'aniosExperiencia',
   'disponibilidad',
   'motivacion',
+  'consentimiento',
+  'fechaConsentimiento',
   'estado',
   'respuestas',
   'puntaje',
@@ -53,6 +55,8 @@ const ESQUEMA = `
     aniosExperiencia INTEGER NOT NULL,
     disponibilidad TEXT NOT NULL,
     motivacion TEXT NOT NULL DEFAULT '',
+    consentimiento BOOLEAN NOT NULL DEFAULT false,
+    fechaConsentimiento TEXT,
     estado TEXT NOT NULL,
     respuestas JSONB,
     puntaje REAL,
@@ -88,6 +92,24 @@ const ESQUEMA = `
     motivo TEXT,
     creadoEn TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS ofertas (
+    id TEXT PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    ubicacion TEXT NOT NULL,
+    familiaCargo TEXT NOT NULL,
+    categoria TEXT NOT NULL DEFAULT '',
+    modalidad TEXT NOT NULL DEFAULT 'Presencial',
+    fechaPublicacion TEXT NOT NULL,
+    cupos INTEGER NOT NULL DEFAULT 1,
+    estado TEXT NOT NULL DEFAULT 'borrador',
+    funciones TEXT NOT NULL DEFAULT '',
+    requisitos TEXT NOT NULL DEFAULT '',
+    beneficios TEXT NOT NULL DEFAULT '',
+    sueldo TEXT NOT NULL DEFAULT '',
+    creadoEn TEXT NOT NULL,
+    actualizadoEn TEXT NOT NULL
+  );
   CREATE INDEX IF NOT EXISTS idx_archivos_candidato ON archivos(candidatoId);
   CREATE INDEX IF NOT EXISTS idx_historial_candidato ON historial_etapas(candidatoId, creadoEn);
 `;
@@ -105,6 +127,7 @@ const MAPA_COLUMNAS = Object.fromEntries(
     'candidatoId',
     'etapaAnterior',
     'etapaNueva',
+    'fechaPublicacion',
   ].map((columna) => [columna.toLowerCase(), columna]),
 );
 
@@ -129,6 +152,15 @@ const obtenerPool = () => {
 const asegurarEsquema = async () => {
   if (!esquemaListo) {
     await obtenerPool().query(ESQUEMA);
+    await obtenerPool().query(
+      'ALTER TABLE candidatos ADD COLUMN IF NOT EXISTS consentimiento BOOLEAN NOT NULL DEFAULT false',
+    );
+    await obtenerPool().query(
+      'ALTER TABLE candidatos ADD COLUMN IF NOT EXISTS fechaConsentimiento TEXT',
+    );
+    for (const [columna, tipo, defecto] of [['categoria', 'TEXT', "''"], ['modalidad', 'TEXT', "'Presencial'"], ['fechaPublicacion', 'TEXT', "''"], ['cupos', 'INTEGER', '1'], ['funciones', 'TEXT', "''"], ['beneficios', 'TEXT', "''"], ['sueldo', 'TEXT', "''"]]) {
+      await obtenerPool().query(`ALTER TABLE ofertas ADD COLUMN IF NOT EXISTS ${columna} ${tipo} NOT NULL DEFAULT ${defecto}`);
+    }
     esquemaListo = true;
   }
 };
@@ -147,6 +179,7 @@ const aCandidato = (fila, archivos = []) => ({
   afinidadIA: fila.afinidadIA === null ? null : Number(fila.afinidadIA),
   respuestas: aJson(fila.respuestas, null),
   dimensiones: aJson(fila.dimensiones, []),
+  consentimiento: Boolean(fila.consentimiento),
   archivos: archivos.map((archivo) => ({ ...archivo, tamano: Number(archivo.tamano) })),
 });
 
@@ -236,11 +269,30 @@ export const dbCandidatos = {
   listarTodos: async () => {
     await asegurarEsquema();
     const resultado = await obtenerPool().query('SELECT * FROM candidatos ORDER BY fechaPostulacion DESC');
-    return resultado.rows.map((fila) => aCandidato(normalizarFila(fila)));
+    return Promise.all(
+      resultado.rows.map(async (fila) => {
+        const normalizado = normalizarFila(fila);
+        return aCandidato(
+          normalizado,
+          await dbArchivos.listarPorCandidato(normalizado.id),
+        );
+      }),
+    );
   },
   obtenerPorId: async (id) => {
     await asegurarEsquema();
     const resultado = await obtenerPool().query('SELECT * FROM candidatos WHERE id = $1', [String(id)]);
+    if (resultado.rows.length === 0) {
+      return null;
+    }
+    const archivos = await dbArchivos.listarPorCandidato(resultado.rows[0].id);
+    return aCandidato(normalizarFila(resultado.rows[0]), archivos);
+  },
+  buscarPorFolio: async (folio) => {
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query('SELECT * FROM candidatos WHERE folio = $1', [
+      String(folio ?? '').trim().toUpperCase(),
+    ]);
     if (resultado.rows.length === 0) {
       return null;
     }
@@ -303,6 +355,59 @@ export const dbCandidatos = {
       return null;
     }
     return dbCandidatos.obtenerPorId(id);
+  },
+};
+
+export const dbOfertas = {
+  listar: async (filtros = {}) => {
+    await asegurarEsquema();
+    const condiciones = [];
+    const valores = [];
+    if (filtros.q) {
+      valores.push(`%${String(filtros.q).trim()}%`);
+      const termino = `$${valores.length}`;
+      condiciones.push(`(LOWER(titulo) LIKE LOWER(${termino}) OR LOWER(descripcion) LIKE LOWER(${termino}) OR LOWER(funciones) LIKE LOWER(${termino}) OR LOWER(requisitos) LIKE LOWER(${termino}))`);
+    }
+    for (const campo of ['titulo', 'ubicacion', 'categoria', 'modalidad']) {
+      if (filtros[campo]) {
+        valores.push(`%${String(filtros[campo]).trim()}%`);
+        condiciones.push(`LOWER(${campo}) LIKE LOWER($${valores.length})`);
+      }
+    }
+    if (filtros.estado) {
+      valores.push(String(filtros.estado));
+      condiciones.push(`estado = $${valores.length}`);
+    }
+    const resultado = await obtenerPool().query(`SELECT * FROM ofertas ${condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''} ORDER BY creadoEn DESC`, valores);
+    return resultado.rows.map(normalizarFila);
+  },
+  obtener: async (id) => {
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query('SELECT * FROM ofertas WHERE id = $1', [String(id)]);
+    return resultado.rows[0] ? normalizarFila(resultado.rows[0]) : null;
+  },
+  insertar: async (oferta) => {
+    await asegurarEsquema();
+    const campos = ['id', 'titulo', 'descripcion', 'ubicacion', 'familiaCargo', 'categoria', 'modalidad', 'fechaPublicacion', 'cupos', 'estado', 'funciones', 'requisitos', 'beneficios', 'sueldo', 'creadoEn', 'actualizadoEn'];
+    await obtenerPool().query(`INSERT INTO ofertas (${campos.join(',')}) VALUES (${campos.map((_, i) => `$${i + 1}`).join(',')})`, campos.map((campo) => oferta[campo]));
+    return dbOfertas.obtener(oferta.id);
+  },
+  actualizar: async (id, cambios) => {
+    await asegurarEsquema();
+    const campos = ['titulo', 'descripcion', 'ubicacion', 'familiaCargo', 'categoria', 'modalidad', 'fechaPublicacion', 'cupos', 'estado', 'funciones', 'requisitos', 'beneficios', 'sueldo', 'actualizadoEn'].filter((campo) => cambios[campo] !== undefined);
+    if (!campos.length) return dbOfertas.obtener(id);
+    const resultado = await obtenerPool().query(`UPDATE ofertas SET ${campos.map((campo, i) => `${campo} = $${i + 1}`).join(', ')} WHERE id = $${campos.length + 1}`, [...campos.map((campo) => cambios[campo]), String(id)]);
+    return resultado.rowCount ? dbOfertas.obtener(id) : null;
+  },
+  eliminar: async (id) => {
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query('DELETE FROM ofertas WHERE id = $1', [String(id)]);
+    return resultado.rowCount > 0;
+  },
+  contar: async () => {
+    await asegurarEsquema();
+    const resultado = await obtenerPool().query('SELECT COUNT(*) AS total FROM ofertas');
+    return Number(resultado.rows[0]?.total ?? 0);
   },
 };
 

@@ -3,9 +3,11 @@ import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { entorno } from './config/entorno.js';
 import { manejarError, manejarNoEncontrado } from './middlewares/errores.js';
 import { rutasApi } from './routes/index.js';
+import { openapi } from './docs/openapi.js';
 
 const configurarRespuestaFrontend = (app) => {
   const indice = path.join(entorno.directorios.frontend, 'index.html');
@@ -34,6 +36,9 @@ export const crearApp = () => {
 
   app.use(express.json({ limit: '20kb' }));
   app.use(express.urlencoded({ extended: false, limit: '20kb' }));
+
+  app.get('/api-docs.json', (_req, res) => res.json(openapi));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi));
 
   app.use('/api', rutasApi);
 

@@ -19,6 +19,8 @@ const COLUMNAS_CANDIDATO = [
   'aniosExperiencia',
   'disponibilidad',
   'motivacion',
+  'consentimiento',
+  'fechaConsentimiento',
   'estado',
   'respuestas',
   'puntaje',
@@ -57,6 +59,8 @@ const ESQUEMA = `
     aniosExperiencia INTEGER NOT NULL,
     disponibilidad TEXT NOT NULL,
     motivacion TEXT NOT NULL DEFAULT '',
+    consentimiento INTEGER NOT NULL DEFAULT 0,
+    fechaConsentimiento TEXT,
     estado TEXT NOT NULL,
     respuestas TEXT,
     puntaje REAL,
@@ -106,8 +110,58 @@ const obtenerBd = () => {
     instancia = new DatabaseSync(rutaBd());
     instancia.exec('PRAGMA foreign_keys = ON;');
     instancia.exec(ESQUEMA);
+    instancia.exec(readFileSync(new URL('./schema.sql', import.meta.url), 'utf8'));
+    const columnasOferta = new Set(instancia.prepare('PRAGMA table_info(ofertas)').all().map((fila) => fila.name));
+    for (const [columna, tipo, defecto] of [['categoria', 'TEXT', "''"], ['modalidad', 'TEXT', "'Presencial'"], ['fechaPublicacion', 'TEXT', "''"], ['cupos', 'INTEGER', '1'], ['funciones', 'TEXT', "''"], ['beneficios', 'TEXT', "''"], ['sueldo', 'TEXT', "''"]]) {
+      if (!columnasOferta.has(columna)) instancia.exec(`ALTER TABLE ofertas ADD COLUMN ${columna} ${tipo} NOT NULL DEFAULT ${defecto}`);
+    }
+    const columnas = instancia.prepare('PRAGMA table_info(candidatos)').all().map((fila) => fila.name);
+    if (!columnas.includes('consentimiento')) {
+      instancia.exec('ALTER TABLE candidatos ADD COLUMN consentimiento INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!columnas.includes('fechaConsentimiento')) {
+      instancia.exec('ALTER TABLE candidatos ADD COLUMN fechaConsentimiento TEXT');
+    }
   }
   return instancia;
+};
+
+export const dbOfertas = {
+  listar: async (filtros = {}) => {
+    const condiciones = [];
+    const valores = [];
+    if (filtros.q) {
+      condiciones.push('(LOWER(titulo) LIKE LOWER(?) OR LOWER(descripcion) LIKE LOWER(?) OR LOWER(funciones) LIKE LOWER(?) OR LOWER(requisitos) LIKE LOWER(?))');
+      valores.push(...Array(4).fill(`%${String(filtros.q).trim()}%`));
+    }
+    for (const campo of ['titulo', 'ubicacion', 'categoria', 'modalidad']) {
+      if (filtros[campo]) {
+        condiciones.push(`LOWER(${campo}) LIKE LOWER(?)`);
+        valores.push(`%${String(filtros[campo]).trim()}%`);
+      }
+    }
+    if (filtros.estado) {
+      condiciones.push('estado = ?');
+      valores.push(String(filtros.estado));
+    }
+    const sql = `SELECT * FROM ofertas ${condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''} ORDER BY creadoEn DESC`;
+    return obtenerBd().prepare(sql).all(...valores);
+  },
+  obtener: async (id) => obtenerBd().prepare('SELECT * FROM ofertas WHERE id = ?').get(String(id)) ?? null,
+  insertar: async (oferta) => {
+    const campos = ['id', 'titulo', 'descripcion', 'ubicacion', 'familiaCargo', 'categoria', 'modalidad', 'fechaPublicacion', 'cupos', 'estado', 'funciones', 'requisitos', 'beneficios', 'sueldo', 'creadoEn', 'actualizadoEn'];
+    obtenerBd().prepare(`INSERT INTO ofertas (${campos.join(',')}) VALUES (${campos.map(() => '?').join(',')})`).run(...campos.map((campo) => oferta[campo]));
+    return dbOfertas.obtener(oferta.id);
+  },
+  actualizar: async (id, cambios) => {
+    const campos = ['titulo', 'descripcion', 'ubicacion', 'familiaCargo', 'categoria', 'modalidad', 'fechaPublicacion', 'cupos', 'estado', 'funciones', 'requisitos', 'beneficios', 'sueldo', 'actualizadoEn'].filter((campo) => cambios[campo] !== undefined);
+    if (!campos.length) return dbOfertas.obtener(id);
+    const valores = campos.map((campo) => cambios[campo]);
+    const resultado = obtenerBd().prepare(`UPDATE ofertas SET ${campos.map((campo) => `${campo} = ?`).join(', ')} WHERE id = ?`).run(...valores, String(id));
+    return resultado.changes ? dbOfertas.obtener(id) : null;
+  },
+  eliminar: async (id) => obtenerBd().prepare('DELETE FROM ofertas WHERE id = ?').run(String(id)).changes > 0,
+  contar: async () => Number(obtenerBd().prepare('SELECT COUNT(*) AS total FROM ofertas').get()?.total ?? 0),
 };
 
 const leerJson = (texto, defecto) => {
@@ -125,6 +179,7 @@ const aCandidato = (fila, archivos = []) => ({
   ...fila,
   respuestas: leerJson(fila.respuestas, null),
   dimensiones: leerJson(fila.dimensiones, []),
+  consentimiento: Boolean(fila.consentimiento),
   archivos: archivos.map((archivo) => ({ ...archivo })),
 });
 
@@ -164,6 +219,17 @@ export const dbUsuarios = {
   },
 };
 
+export const cerrarBaseDatos = () => {
+  if (instancia) {
+    try {
+      instancia.close();
+    } catch {
+      // No hace nada si ya está cerrada.
+    }
+    instancia = null;
+  }
+};
+
 export const dbArchivos = {
   listarPorCandidato: async (candidatoId) =>
     obtenerBd()
@@ -197,10 +263,24 @@ export const dbCandidatos = {
     const filas = obtenerBd()
       .prepare('SELECT * FROM candidatos ORDER BY fechaPostulacion DESC')
       .all();
-    return filas.map((fila) => aCandidato(fila));
+    return Promise.all(
+      filas.map(async (fila) =>
+        aCandidato(fila, await dbArchivos.listarPorCandidato(fila.id)),
+      ),
+    );
   },
   obtenerPorId: async (id) => {
     const fila = obtenerBd().prepare('SELECT * FROM candidatos WHERE id = ?').get(String(id));
+    if (!fila) {
+      return null;
+    }
+    const archivos = await dbArchivos.listarPorCandidato(fila.id);
+    return aCandidato(fila, archivos);
+  },
+  buscarPorFolio: async (folio) => {
+    const fila = obtenerBd()
+      .prepare('SELECT * FROM candidatos WHERE folio = ?')
+      .get(String(folio ?? '').trim().toUpperCase());
     if (!fila) {
       return null;
     }

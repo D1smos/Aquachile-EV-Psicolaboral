@@ -25,6 +25,8 @@ const aLista = (valor) =>
     .map((elemento) => elemento.trim())
     .filter(Boolean);
 
+const aRuta = (valor, defecto) => (valor ? path.resolve(String(valor)) : defecto);
+
 export const entorno = Object.freeze({
   raizBackend,
   esProduccion: process.env.NODE_ENV === 'production',
@@ -35,11 +37,24 @@ export const entorno = Object.freeze({
   },
   corsOrigenes: aLista(process.env.CORS_ORIGIN),
   servirFrontend: process.env.SERVE_FRONTEND === 'true',
+  urlPublica: String(
+    process.env.PUBLIC_APP_URL ??
+      (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5173'),
+  ).replace(/\/+$/, ''),
   db: {
     url: process.env.DATABASE_URL ?? '',
   },
   limiteArchivoMb: aEntero(process.env.LIMITE_ARCHIVO_MB, 5),
   seedDemo: process.env.SEED_DEMO === 'true',
+  correo: {
+    host: process.env.SMTP_HOST ?? '',
+    puerto: aEntero(process.env.SMTP_PORT, 587),
+    seguro: process.env.SMTP_SECURE === 'true',
+    usuario: process.env.SMTP_USER ?? '',
+    clave: process.env.SMTP_PASS ?? '',
+    remitente: process.env.SMTP_FROM ?? '',
+    responderA: process.env.SMTP_REPLY_TO ?? '',
+  },
   evaluador: {
     email: process.env.EVALUADOR_EMAIL ?? '',
     nombre: process.env.EVALUADOR_NOMBRE ?? 'Evaluador Psicolaboral',
@@ -51,8 +66,8 @@ export const entorno = Object.freeze({
     password: process.env.ANALISTA_PASSWORD ?? '',
   },
   directorios: {
-    uploads: path.join(raizBackend, 'uploads'),
-    datos: path.join(raizBackend, 'data'),
+    uploads: aRuta(process.env.DIRECTORIO_UPLOADS, path.join(raizBackend, 'uploads')),
+    datos: aRuta(process.env.DIRECTORIO_DATOS, path.join(raizBackend, 'data')),
     frontend: path.resolve(raizBackend, '..', 'frontend', 'dist'),
   },
 });

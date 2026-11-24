@@ -2,7 +2,7 @@ import { entorno } from './entorno.js';
 
 const modulo = entorno.db.url ? await import('./postgres.js') : await import('./sqlite.js');
 
-export const { dbUsuarios, dbArchivos, dbCandidatos, dbHistorial } = modulo;
+export const { dbUsuarios, dbArchivos, dbCandidatos, dbOfertas, dbHistorial } = modulo;
 
 export const migrarJsonSiExiste = modulo.migrarJsonSiExiste ?? (async () => 0);
 

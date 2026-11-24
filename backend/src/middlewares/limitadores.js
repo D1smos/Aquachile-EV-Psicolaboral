@@ -21,3 +21,9 @@ export const limitadorPostulaciones = crearLimitador({
   limite: entorno.esProduccion ? 15 : 60,
   mensaje: 'Se alcanzó el límite de postulaciones permitidas. Intenta más tarde.',
 });
+
+export const limitadorConsulta = crearLimitador({
+  ventanaMs: 15 * 60 * 1000,
+  limite: entorno.esProduccion ? 12 : 80,
+  mensaje: 'Demasiadas consultas de estado. Intenta nuevamente en unos minutos.',
+});

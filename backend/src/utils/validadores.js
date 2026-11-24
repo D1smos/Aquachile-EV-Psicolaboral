@@ -13,10 +13,13 @@ export const esTelefonoValido = (valor) => {
   return TELEFONO_REGEX.test(digitos);
 };
 
-export const esRutValido = (valor) => {
-  const limpio = String(valor ?? '')
-    .replace(/[.\-\s]/g, '')
+export const normalizarRut = (valor) =>
+  String(valor ?? '')
+    .replace(/[^0-9k]/gi, '')
     .toUpperCase();
+
+export const esRutValido = (valor) => {
+  const limpio = normalizarRut(valor).replace(/[.\-\s]/g, '');
   if (!/^\d{7,8}[\dK]$/.test(limpio)) {
     return false;
   }

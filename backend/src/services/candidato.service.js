@@ -5,6 +5,10 @@ import { dbArchivos, dbCandidatos, dbHistorial } from '../config/baseDatos.js';
 import { entorno } from '../config/entorno.js';
 import { ESTADOS_PROCESO, TIPOS_ARCHIVO } from '../domain/constantes.js';
 import { ErrorHttp, noEncontrado } from '../utils/ErrorHttp.js';
+import { normalizarRut } from '../utils/validadores.js';
+
+const MENSAJE_DUPLICADO =
+  'Ya existe una postulación con esos datos. Revisa la ficha existente o contacta a Reclutamiento.';
 
 const nuevoArchivo = (tipo, archivo) => ({
   id: crypto.randomUUID(),
@@ -27,13 +31,17 @@ export const crearPostulacion = async (datos, archivos, responsable = 'postulaci
   const correo = String(datos.correo).trim().toLowerCase();
   const porRut = await dbCandidatos.buscarPorRut(rut);
   if (porRut) {
-    throw new ErrorHttp(`Ya existe un candidato con el RUT ${rut} (folio ${porRut.folio})`, 409);
+    throw new ErrorHttp(MENSAJE_DUPLICADO, 409);
   }
   const porCorreo = await dbCandidatos.buscarPorEmail(correo);
   if (porCorreo) {
-    throw new ErrorHttp(`Ya existe un candidato con el correo ${correo} (folio ${porCorreo.folio})`, 409);
+    throw new ErrorHttp(MENSAJE_DUPLICADO, 409);
   }
   const ahora = new Date().toISOString();
+  const aceptaPrivacidad =
+    datos.aceptaPrivacidad === true ||
+    datos.aceptaPrivacidad === 'true' ||
+    datos.aceptaPrivacidad === 'on';
   const antecedentes = (archivos?.antecedentes ?? []).map((archivo) =>
     nuevoArchivo(TIPOS_ARCHIVO.ANTECEDENTES, archivo),
   );
@@ -53,6 +61,8 @@ export const crearPostulacion = async (datos, archivos, responsable = 'postulaci
     disponibilidad: String(datos.disponibilidad).trim(),
     aniosExperiencia: Number(datos.aniosExperiencia),
     motivacion: String(datos.motivacion ?? '').trim(),
+    consentimiento: aceptaPrivacidad,
+    fechaConsentimiento: aceptaPrivacidad ? ahora : null,
     estado: ESTADOS_PROCESO.PENDIENTE,
     respuestas: null,
     puntaje: null,
@@ -235,3 +245,21 @@ export const resumenPublico = (candidato) => ({
   estado: candidato.estado,
   fechaPostulacion: candidato.fechaPostulacion,
 });
+
+export const resumenSeguimiento = (candidato) => ({
+  folio: candidato.folio,
+  nombre: candidato.nombre,
+  cargo: candidato.cargo,
+  familiaCargo: candidato.familiaCargo,
+  estado: candidato.estado,
+  fechaPostulacion: candidato.fechaPostulacion,
+  fechaActualizacion: candidato.fechaActualizacion,
+});
+
+export const consultarPostulacionPublica = async (folio, rut) => {
+  const candidato = await dbCandidatos.buscarPorFolio(folio);
+  if (!candidato || normalizarRut(candidato.rut) !== normalizarRut(rut)) {
+    throw new ErrorHttp('No encontramos una postulación con esos datos.', 404);
+  }
+  return resumenSeguimiento(candidato);
+};

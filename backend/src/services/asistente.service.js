@@ -5,6 +5,7 @@ import { TIPOS_ARCHIVO } from '../domain/constantes.js';
 import { localizarArchivo, obtenerCandidato } from './candidato.service.js';
 
 const MAX_CARACTERES = 4000;
+const LIMITACIONES = 'Análisis automatizado basado en coincidencias textuales y datos disponibles; puede omitir contexto, contener sesgos y no mide competencias ni idoneidad. Es solo apoyo: requiere revisión humana y nunca debe usarse para descartar automáticamente a una persona.';
 
 const VACIAS = new Set([
   'de', 'la', 'el', 'en', 'los', 'del', 'se', 'las', 'por', 'un', 'una', 'unos', 'unas',
@@ -126,6 +127,12 @@ export const construirAsistencia = (candidato, textoCv) => {
     faltantes,
     sinCv: !textoCv,
     borrador: construirBorrador(candidato, afinidad, coincidencias),
+    criterios_usados: [
+      'Coincidencia de palabras clave del cargo y la familia del cargo con el texto legible del CV.',
+      'Experiencia, formación y disponibilidad declaradas para contextualizar el resumen.',
+    ],
+    limitaciones: LIMITACIONES,
+    requiere_revision_humana: true,
   };
 };
 

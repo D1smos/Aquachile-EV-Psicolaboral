@@ -9,6 +9,7 @@ import {
   comparar,
   crearManual,
   descargarArchivo,
+  descargarCv,
   eliminar,
   evaluar,
   exportarCsv,
@@ -24,11 +25,12 @@ rutasCandidatos.use(requiereAutenticacion);
 rutasCandidatos.get('/', listar);
 rutasCandidatos.get('/exportar.csv', exportarCsv);
 rutasCandidatos.get('/comparar', comparar);
-rutasCandidatos.post('/', subirPostulacion, crearManual);
+rutasCandidatos.get('/:id/cv', descargarCv);
+rutasCandidatos.post('/', requiereRol(ROL_EVALUADOR), subirPostulacion, crearManual);
 rutasCandidatos.get('/:id', obtener);
-rutasCandidatos.put('/:id', actualizar);
-rutasCandidatos.delete('/:id', eliminar);
-rutasCandidatos.patch('/:id/estado', actualizarEstado);
+rutasCandidatos.put('/:id', requiereRol(ROL_EVALUADOR), actualizar);
+rutasCandidatos.delete('/:id', requiereRol(ROL_EVALUADOR), eliminar);
+rutasCandidatos.patch('/:id/estado', requiereRol(ROL_EVALUADOR), actualizarEstado);
 rutasCandidatos.post('/:id/evaluacion', requiereRol(ROL_EVALUADOR), evaluar);
 rutasCandidatos.post('/:id/asistente', requiereRol(ROL_EVALUADOR), asistir);
 rutasCandidatos.get('/:id/informe.pdf', informePdf);
