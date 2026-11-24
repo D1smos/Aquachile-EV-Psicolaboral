@@ -102,7 +102,8 @@ export default function ModalEvaluacion({
   const descargar = async (archivo) => {
     setDescargando(archivo.id);
     try {
-      await api.descargar(`/candidatos/${candidato.id}/archivos/${archivo.id}`, archivo.nombreOriginal);
+      if (archivo.tipo === 'cv') await api.descargarCv(candidato.id, archivo.nombreOriginal);
+      else await api.descargar(`/candidatos/${candidato.id}/archivos/${archivo.id}`, archivo.nombreOriginal);
     } catch (error) {
       mostrarToast(error.message, 'error');
     } finally {
@@ -209,25 +210,6 @@ export default function ModalEvaluacion({
               </div>
             </dl>
 
-            <div className="estado-fila">
-              <label className="etiqueta-campo" htmlFor="estado-proceso">
-                Estado del proceso
-              </label>
-              <select
-                id="estado-proceso"
-                className="control-campo control-reducido"
-                value={formulario.estado}
-                onChange={cambiarEstado}
-              >
-                {estados.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {estado}
-                  </option>
-                ))}
-              </select>
-              <EstadoBadge estado={formulario.estado} />
-            </div>
-
             <div className="archivos-fila">
               <span className="etiqueta-campo">Documentos adjuntos</span>
               {archivos.length === 0 ? (
@@ -253,7 +235,7 @@ export default function ModalEvaluacion({
 
           <section className="modal-seccion">
             <div className="seccion-cabecera">
-              <h4 className="seccion-titulo">Asistente IA</h4>
+              <h4 className="seccion-titulo">Apoyo automático</h4>
               <button
                 type="button"
                 className="boton boton-secundario boton-sm"
@@ -272,11 +254,14 @@ export default function ModalEvaluacion({
               </button>
             </div>
             <small className="ayuda-campo">
-              Apoyo automático a partir del perfil y el CV. No reemplaza la evaluación profesional.
+              Analiza el perfil y el CV con reglas de coincidencia. No reemplaza la evaluación profesional.
             </small>
+            <p className="aviso-revision-humana" role="note"><i className="bi bi-shield-exclamation" aria-hidden="true" /> La asistencia es solo apoyo. Requiere revisión humana obligatoria y nunca descarta candidatos automáticamente.</p>
             {asistencia && (
               <div className="asistencia-resultado">
                 <p>{asistencia.resumen}</p>
+                {asistencia.criterios_usados?.length > 0 && <div><strong>Criterios usados</strong><ul className="asistencia-criterios">{asistencia.criterios_usados.map((criterio) => <li key={criterio}>{criterio}</li>)}</ul></div>}
+                {asistencia.limitaciones && <p className="asistencia-limitaciones"><strong>Limitaciones:</strong> {asistencia.limitaciones}</p>}
                 {Number.isFinite(asistencia.afinidad) ? (
                   <div className="asistencia-afinidad">
                     <span className="puntaje-valor">{asistencia.afinidad}%</span>
@@ -390,6 +375,35 @@ export default function ModalEvaluacion({
               }
             />
             <small className="contador">{formulario.observaciones.length}/1000</small>
+          </section>
+
+          <section className="modal-seccion cierre-proceso">
+            <h4 className="seccion-titulo">Cierre del proceso</h4>
+            <div className="estado-fila">
+              <label className="etiqueta-campo" htmlFor="estado-proceso">
+                Estado del proceso
+              </label>
+              <select
+                id="estado-proceso"
+                className="control-campo control-reducido"
+                value={formulario.estado}
+                onChange={cambiarEstado}
+              >
+                {estados.map((estado) => (
+                  <option key={estado} value={estado}>
+                    {estado}
+                  </option>
+                ))}
+              </select>
+              <EstadoBadge estado={formulario.estado} />
+            </div>
+            <p className="nota-aprobacion">
+              <i className="bi bi-envelope-check" aria-hidden="true" />
+              <span>
+                Si el estado cambia a <strong>Aprobado</strong>, se enviará un correo automático a{' '}
+                {candidato.correo}.
+              </span>
+            </p>
           </section>
         </div>
 

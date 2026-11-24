@@ -1,6 +1,6 @@
 export default function TarjetaMetrica({ titulo, valor, detalle, tono = 'azul', icono }) {
   return (
-    <article className={`tarjeta-kpi kpi-${tono}`}>
+    <article className={`tarjeta-kpi h-100 kpi-${tono}`}>
       <div className="kpi-cabecera">
         <span className="kpi-icono" aria-hidden="true">
           <i className={`bi ${icono}`} />

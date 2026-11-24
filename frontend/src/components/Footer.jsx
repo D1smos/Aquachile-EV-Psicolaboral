@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Marca from './Marca.jsx';
 
 export default function Footer({ compacto = false }) {
@@ -6,7 +7,10 @@ export default function Footer({ compacto = false }) {
       <footer className="pie-pagina pie-compacto">
         <div className="contenedor pie-interno">
           <p className="pie-legal">
-            © {new Date().getFullYear()} AquaChile · Gestión de Evaluaciones Psicolaborales
+            © {new Date().getFullYear()} AquaChile ·{' '}
+            <Link to="/privacidad" className="enlace-pie">
+              Política de privacidad
+            </Link>
           </p>
         </div>
       </footer>
@@ -22,7 +26,10 @@ export default function Footer({ compacto = false }) {
           AquaChile
         </p>
         <p className="pie-legal">
-          © {new Date().getFullYear()} AquaChile. Todos los derechos reservados.
+          © {new Date().getFullYear()} AquaChile. Todos los derechos reservados. ·{' '}
+          <Link to="/privacidad" className="enlace-pie">
+            Política de privacidad
+          </Link>
         </p>
       </div>
     </footer>

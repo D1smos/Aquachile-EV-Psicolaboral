@@ -8,6 +8,7 @@ import {
   esRutValido,
   esTelefonoValido,
   formatearRut,
+  formatearTelefono,
 } from '../utils/validaciones.js';
 
 const EXTENSIONES_ANTECEDENTE = ['pdf', 'doc', 'docx', 'xlsx'];
@@ -80,7 +81,12 @@ export default function ModalNuevoCandidato({ catalogo, candidatoExistente = nul
     const { name, value } = evento.target;
     setFormulario((previo) => ({
       ...previo,
-      [name]: name === 'rut' ? formatearRut(value) : value,
+      [name]:
+        name === 'rut'
+          ? formatearRut(value)
+          : name === 'telefono'
+            ? formatearTelefono(value)
+            : value,
       ...(name === 'familiaCargo' ? { cargo: '' } : {}),
     }));
   };
@@ -207,10 +213,19 @@ export default function ModalNuevoCandidato({ catalogo, candidatoExistente = nul
 
         <form className="modal-cuerpo" onSubmit={enviar} noValidate>
           <div className="rejilla-campos">
-            {campo('nombre', 'Nombre y apellido')}
-            {campo('rut', 'RUT', 'text', { placeholder: '12.345.678-5', inputMode: 'numeric' })}
-            {campo('correo', 'Correo electrónico', 'email')}
-            {campo('telefono', 'Teléfono móvil', 'tel', { placeholder: '912345678' })}
+            {campo('nombre', 'Nombre y apellido', 'text', { maxLength: 80 })}
+            {campo('rut', 'RUT', 'text', {
+              placeholder: '12.345.678-5',
+              inputMode: 'text',
+              autoCapitalize: 'characters',
+              spellCheck: false,
+              maxLength: 12,
+            })}
+            {campo('correo', 'Correo electrónico', 'email', { maxLength: 120 })}
+            {campo('telefono', 'Teléfono móvil', 'tel', {
+              placeholder: '9 1234 5678',
+              maxLength: 12,
+            })}
             <div>
               <label className="etiqueta-campo" htmlFor="nuevo-familiaCargo">
                 Familia del cargo
@@ -305,6 +320,7 @@ export default function ModalNuevoCandidato({ catalogo, candidatoExistente = nul
                 name="motivacion"
                 className="control-campo"
                 rows={2}
+                maxLength={500}
                 value={formulario.motivacion}
                 onChange={modificar}
                 disabled={enviando}

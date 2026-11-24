@@ -26,6 +26,7 @@ export default function FiltrosCandidatos({ filtros, onCambiar, cargos = [], est
               name="busqueda"
               type="search"
               className="control-campo"
+              maxLength={80}
               placeholder="Buscar candidato…"
               value={filtros.busqueda}
               onChange={modificar}

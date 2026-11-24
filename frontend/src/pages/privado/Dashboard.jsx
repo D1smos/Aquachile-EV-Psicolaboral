@@ -14,6 +14,21 @@ import TarjetaMetrica from '../../components/TarjetaMetrica.jsx';
 import ModalEvaluacion from '../../components/ModalEvaluacion.jsx';
 import ModalHistorial from '../../components/ModalHistorial.jsx';
 import ModalNuevoCandidato from '../../components/ModalNuevoCandidato.jsx';
+import GestionOfertas from '../../components/GestionOfertas.jsx';
+
+
+const sincronizarSeguimientoLocal = (candidatoActualizado) => {
+  try {
+    const raw = localStorage.getItem('aquachile_ultima_postulacion');
+    if (!raw) return;
+    const previo = JSON.parse(raw);
+    if (previo?.folio === candidatoActualizado?.folio || previo?.id === candidatoActualizado?.id) {
+      localStorage.setItem('aquachile_ultima_postulacion', JSON.stringify({ ...previo, ...candidatoActualizado }));
+    }
+  } catch {
+    // Ignorar error de almacenamiento
+  }
+};
 
 const FILTROS_INICIALES = { busqueda: '', cargo: '', estado: '', desde: '', hasta: '' };
 const POR_PAGINA = 8;
@@ -80,6 +95,33 @@ export default function Dashboard() {
     cargar();
   }, [cargar]);
 
+  const refrescar = useCallback(async () => {
+    try {
+      const datos = await api.get('/candidatos');
+      setCandidatos(datos.candidatos);
+    } catch (capturado) {
+      if (capturado.codigo === 401) {
+        setError(capturado.message);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') {
+        refrescar();
+      }
+    };
+    const intervalo = window.setInterval(refrescar, 30000);
+    window.addEventListener('focus', refrescar);
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      window.clearInterval(intervalo);
+      window.removeEventListener('focus', refrescar);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [refrescar]);
+
   useEffect(() => {
     setPagina(1);
   }, [filtros]);
@@ -120,7 +162,17 @@ export default function Dashboard() {
         previos.map((candidato) => (candidato.id === id ? datos.candidato : candidato)),
       );
       setSeleccion((previo) => (previo?.id === id ? datos.candidato : previo));
-      mostrarToast(datos.mensaje, 'exito');
+      sincronizarSeguimientoLocal(datos.candidato);
+      if (datos.correo?.enviado) {
+        mostrarToast(`${datos.mensaje} · correo de aceptación enviado`, 'exito');
+      } else if (datos.correo) {
+        mostrarToast(
+          `${datos.mensaje}. No se pudo enviar el correo: ${datos.correo.motivo}`,
+          'advertencia',
+        );
+      } else {
+        mostrarToast(datos.mensaje, 'exito');
+      }
     } catch (capturado) {
       mostrarToast(capturado.message, 'error');
     }
@@ -185,7 +237,17 @@ export default function Dashboard() {
         previos.map((candidato) => (candidato.id === id ? datos.candidato : candidato)),
       );
       setSeleccion(null);
-      mostrarToast(`Evaluación guardada · ${datos.candidato.idoneidad}`, 'exito');
+      const mensaje = `Evaluación guardada · ${datos.candidato.idoneidad}`;
+      if (datos.correo?.enviado) {
+        mostrarToast(`${mensaje} · correo de aceptación enviado`, 'exito');
+      } else if (datos.correo) {
+        mostrarToast(
+          `${mensaje}. No se pudo enviar el correo: ${datos.correo.motivo}`,
+          'advertencia',
+        );
+      } else {
+        mostrarToast(mensaje, 'exito');
+      }
     } catch (capturado) {
       mostrarToast(capturado.message, 'error');
     } finally {
@@ -195,20 +257,25 @@ export default function Dashboard() {
 
   return (
     <div className="pagina-dashboard">
-      <header className="cabecera-dashboard">
+      <header className="cabecera-dashboard" id="resumen">
         <div>
           <h1>Dashboard</h1>
           <p>Panel de gestión, métricas y seguimiento de evaluaciones psicolaborales.</p>
           {usuario && (
             <p className="modal-subtitulo">
-              Conectado como {usuario.nombre} · {usuario.rol === 'psicologo' ? 'Evaluador' : 'Analista'}
+              Conectado como {usuario.nombre}
+              <span className="chip-rol">
+                {usuario.rol === 'psicologo' ? 'Evaluador' : 'Analista'}
+              </span>
             </p>
           )}
         </div>
         <div className="cabecera-dashboard-acciones">
-          <button type="button" className="boton boton-primario" onClick={() => setMostrarNuevo(true)}>
-            <i className="bi bi-person-plus-fill" aria-hidden="true" /> Nuevo candidato
-          </button>
+          {puedeEvaluar && (
+            <button type="button" className="boton boton-primario" onClick={() => setMostrarNuevo(true)}>
+              <i className="bi bi-person-plus-fill" aria-hidden="true" /> Nuevo candidato
+            </button>
+          )}
           <button type="button" className="boton boton-secundario" onClick={descargarCsv}>
             <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" /> Exportar CSV
           </button>
@@ -224,35 +291,43 @@ export default function Dashboard() {
 
       {!cargando && !error && (
         <>
-          <section className="rejilla-kpi" aria-label="Métricas del proceso">
-            <TarjetaMetrica
-              titulo="Total candidatos"
-              valor={metricas.totalCandidatos}
-              detalle={`${metricas.porEstado.Pendiente} pendientes de revisión`}
-              tono="azul"
-              icono="bi-people-fill"
-            />
-            <TarjetaMetrica
-              titulo="Postulaciones del mes"
-              valor={metricas.postulacionesMes}
-              detalle="Registradas en el mes en curso"
-              tono="cian"
-              icono="bi-calendar-plus-fill"
-            />
-            <TarjetaMetrica
-              titulo="Evaluaciones completadas"
-              valor={formatearPorcentaje(metricas.pctEvaluacionesCompletadas)}
-              detalle={`${metricas.evaluacionesCompletadas} de ${metricas.totalCandidatos} candidatos`}
-              tono="verde"
-              icono="bi-clipboard2-check-fill"
-            />
-            <TarjetaMetrica
-              titulo="Aprobados"
-              valor={metricas.porEstado.Aprobado}
-              detalle={`${metricas.porEstado.Rechazado} rechazados · ${metricas.porEstado['En Proceso']} en proceso`}
-              tono="naranja"
-              icono="bi-patch-check-fill"
-            />
+          <section className="rejilla-kpi row g-3" id="metricas" aria-label="Métricas del proceso">
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Total candidatos"
+                valor={metricas.totalCandidatos}
+                detalle={`${metricas.porEstado.Pendiente} pendientes de revisión`}
+                tono="azul"
+                icono="bi-people-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Postulaciones del mes"
+                valor={metricas.postulacionesMes}
+                detalle="Registradas en el mes en curso"
+                tono="cian"
+                icono="bi-calendar-plus-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Evaluaciones completadas"
+                valor={formatearPorcentaje(metricas.pctEvaluacionesCompletadas)}
+                detalle={`${metricas.evaluacionesCompletadas} de ${metricas.totalCandidatos} candidatos`}
+                tono="verde"
+                icono="bi-clipboard2-check-fill"
+              />
+            </div>
+            <div className="col-6 col-md-4 col-xl-3">
+              <TarjetaMetrica
+                titulo="Aprobados"
+                valor={metricas.porEstado.Aprobado}
+                detalle={`${metricas.porEstado.Rechazado} rechazados · ${metricas.porEstado['En Proceso']} en proceso`}
+                tono="naranja"
+                icono="bi-patch-check-fill"
+              />
+            </div>
           </section>
 
           <FiltrosCandidatos
@@ -264,7 +339,7 @@ export default function Dashboard() {
             onLimpiar={limpiarFiltros}
           />
 
-          <section className="panel-tabla">
+          <section className="panel-tabla" id="candidatos">
             <div className="panel-tabla-cabecera">
               <h2>Candidatos registrados</h2>
               <span>Ordenados por fecha de postulación</span>
@@ -304,6 +379,7 @@ export default function Dashboard() {
               </nav>
             )}
           </section>
+          {puedeEvaluar && <GestionOfertas mostrarToast={mostrarToast} />}
         </>
       )}
 

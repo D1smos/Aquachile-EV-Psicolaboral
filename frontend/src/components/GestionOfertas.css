@@ -1,0 +1,20 @@
+.gestion-ofertas { margin-top: 2.25rem; padding: 1.35rem; border: 1px solid var(--gris-200); border-radius: 1rem; background: #fff; scroll-margin-top: 1.5rem; }
+.gestion-ofertas-cabecera, .oferta-admin-fila, .oferta-form-acciones, .oferta-admin-acciones { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.gestion-ofertas-cabecera { margin-bottom: 1rem; }
+.gestion-ofertas-cabecera h2 { margin: .25rem 0 0; }
+.oferta-form-admin { margin-bottom: 1.25rem; padding: 1rem; border-radius: .8rem; background: var(--gris-100); }
+.oferta-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; }
+.oferta-form-grid label:has(textarea) { grid-column: span 1; }
+.oferta-form-acciones { justify-content: flex-start; margin-top: 1rem; }
+.oferta-admin-lista { display: grid; }
+.oferta-admin-fila { padding: .9rem .25rem; border-top: 1px solid var(--gris-200); }
+.oferta-admin-fila > div:first-child { display: grid; flex: 1; gap: .2rem; }
+.oferta-admin-fila small { color: var(--gris-600); }
+.oferta-estado { padding: .25rem .55rem; border-radius: 99px; background: var(--gris-100); font-size: .78rem; text-transform: capitalize; }
+.oferta-estado.estado-publicada { color: #146c43; background: #d1e7dd; }
+.oferta-admin-acciones { justify-content: flex-end; }
+.aviso-revision-humana, .asistencia-limitaciones { padding: .75rem; border-left: 3px solid #b7791f; border-radius: .3rem; background: #fff8e5; color: #654b12; }
+.asistencia-criterios { margin: .4rem 0 .8rem; padding-left: 1.3rem; }
+.asistencia-criterios li { margin-block: .2rem; }
+@media (max-width: 850px) { .oferta-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .oferta-admin-fila { align-items: flex-start; flex-wrap: wrap; } .oferta-admin-acciones { width: 100%; justify-content: flex-start; flex-wrap: wrap; } }
+@media (max-width: 560px) { .oferta-form-grid { grid-template-columns: 1fr; } }

@@ -64,6 +64,18 @@ export const api = {
   patch: (ruta, cuerpo) => ejecutar('PATCH', ruta, { cuerpo }),
   put: (ruta, cuerpo) => ejecutar('PUT', ruta, { cuerpo }),
   eliminar: (ruta) => ejecutar('DELETE', ruta),
+  ofertasPublicas: (filtros = {}) => {
+    const parametros = new URLSearchParams(Object.entries(filtros).filter(([, valor]) => String(valor ?? '').trim()));
+    const consulta = parametros.size ? `?${parametros}` : '';
+    return ejecutar('GET', `/ofertas/publicas${consulta}`);
+  },
+  ofertaPublica: (id) => ejecutar('GET', `/ofertas/publicas/${encodeURIComponent(id)}`),
+  ofertasPrivadas: () => ejecutar('GET', '/ofertas'),
+  crearOferta: (oferta) => ejecutar('POST', '/ofertas', { cuerpo: oferta }),
+  actualizarOferta: (id, oferta) => ejecutar('PUT', `/ofertas/${encodeURIComponent(id)}`, { cuerpo: oferta }),
+  cambiarEstadoOferta: (id, estado) => ejecutar('PATCH', `/ofertas/${encodeURIComponent(id)}/estado`, { cuerpo: { estado } }),
+  eliminarOferta: (id) => ejecutar('DELETE', `/ofertas/${encodeURIComponent(id)}`),
+  descargarCv: (id, nombreArchivo = 'cv') => api.descargar(`/candidatos/${encodeURIComponent(id)}/cv`, nombreArchivo),
   descargar: async (ruta, nombreArchivo) => {
     let respuesta;
     try {

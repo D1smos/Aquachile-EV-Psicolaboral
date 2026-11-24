@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
@@ -20,6 +21,8 @@ const FORM_INICIAL = {
   disponibilidad: '',
   aniosExperiencia: '',
   motivacion: '',
+  oferta_id: '',
+  aceptaPrivacidad: false,
 };
 
 const ARCHIVOS_MAXIMOS = 4;
@@ -42,6 +45,7 @@ function Campo({ id, etiqueta, error, children, ayuda }) {
 }
 
 export default function Postulacion() {
+  const [searchParams] = useSearchParams();
   const { mostrarToast } = useToast();
   const [formulario, setFormulario] = useState(FORM_INICIAL);
   const [cv, setCv] = useState(null);
@@ -65,6 +69,20 @@ export default function Postulacion() {
     cargarCatalogo();
   }, []);
 
+  useEffect(() => {
+    if (!catalogo) return;
+    const ofertaId = searchParams.get('oferta_id');
+    const cargo = searchParams.get('cargo');
+    const familiaCargo = searchParams.get('familiaCargo') ?? searchParams.get('categoria') ?? '';
+    if (!ofertaId && !cargo && !familiaCargo) return;
+    setFormulario((previo) => ({
+      ...previo,
+      oferta_id: ofertaId ?? '',
+      cargo: cargo ?? previo.cargo,
+      familiaCargo: catalogo.familiasCargos[familiaCargo] ? familiaCargo : previo.familiaCargo,
+    }));
+  }, [catalogo, searchParams]);
+
   const modificar = (evento) => {
     const { name, value } = evento.target;
 
@@ -78,6 +96,10 @@ export default function Postulacion() {
     }
     if (name === 'familiaCargo') {
       setFormulario((previo) => ({ ...previo, familiaCargo: value, cargo: '' }));
+      return;
+    }
+    if (name === 'aceptaPrivacidad') {
+      setFormulario((previo) => ({ ...previo, aceptaPrivacidad: evento.target.checked }));
       return;
     }
     setFormulario((previo) => ({ ...previo, [name]: value }));
@@ -135,6 +157,14 @@ export default function Postulacion() {
 
     try {
       const respuesta = await api.post('/postulaciones', datos);
+      try {
+        localStorage.setItem(
+          'aquachile_ultima_postulacion',
+          JSON.stringify({ ...respuesta.candidato, rut: formulario.rut }),
+        );
+      } catch {
+        // Ignorar si el navegador bloquea localStorage
+      }
       setEnviado(respuesta.candidato);
       mostrarToast('Postulación enviada correctamente', 'exito');
     } catch (error) {
@@ -162,9 +192,14 @@ export default function Postulacion() {
             <strong>{enviado.cargo}</strong> quedó en estado <em>{enviado.estado}</em>. El equipo
             de selección revisará tu antecedente y te contactará por correo.
           </p>
-          <button type="button" className="boton boton-primario" onClick={limpiar}>
-            Registrar otra postulación
-          </button>
+          <div className="confirmacion-acciones">
+            <Link to="/consulta" className="boton boton-primario">
+              Consultar mi estado
+            </Link>
+            <button type="button" className="boton boton-secundario" onClick={limpiar}>
+              Registrar otra postulación
+            </button>
+          </div>
         </div>
       </section>
     );
@@ -214,7 +249,9 @@ export default function Postulacion() {
                   name="rut"
                   type="text"
                   className="control-campo"
-                  inputMode="numeric"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   maxLength={12}
                   placeholder="12.345.678-5"
                   value={formulario.rut}
@@ -230,6 +267,7 @@ export default function Postulacion() {
                   type="email"
                   className="control-campo"
                   autoComplete="email"
+                  maxLength={120}
                   placeholder="nombre@correo.cl"
                   value={formulario.correo}
                   onChange={modificar}
@@ -457,6 +495,31 @@ export default function Postulacion() {
               </Campo>
             </div>
           </fieldset>
+
+          <div className={`campo-consentimiento ${errores.aceptaPrivacidad ? 'campo-con-error' : ''}`}>
+            <input
+              id="aceptaPrivacidad"
+              name="aceptaPrivacidad"
+              type="checkbox"
+              checked={formulario.aceptaPrivacidad}
+              onChange={modificar}
+              aria-invalid={Boolean(errores.aceptaPrivacidad)}
+              aria-describedby={errores.aceptaPrivacidad ? 'aceptaPrivacidad-error' : undefined}
+            />
+            <label htmlFor="aceptaPrivacidad">
+              He leído y acepto la{' '}
+              <Link to="/privacidad" target="_blank" rel="noreferrer">
+                política de privacidad
+              </Link>{' '}
+              y el tratamiento de mis datos para este proceso de selección.
+            </label>
+            {errores.aceptaPrivacidad && (
+              <small className="error-campo" id="aceptaPrivacidad-error">
+                <i className="bi bi-exclamation-circle" aria-hidden="true" />{' '}
+                {errores.aceptaPrivacidad}
+              </small>
+            )}
+          </div>
 
           <div className="pie-formulario">
             <p className="nota-privacidad">
