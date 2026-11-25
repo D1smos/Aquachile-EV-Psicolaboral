@@ -70,6 +70,7 @@ export default function Dashboard() {
   const { usuario } = useAuth();
   const navegar = useNavigate();
   const puedeEvaluar = usuario?.rol === 'psicologo';
+  const esAnalista = usuario?.rol === 'analista';
   const [candidatos, setCandidatos] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
   const [cuestionario, setCuestionario] = useState(null);
@@ -421,7 +422,7 @@ export default function Dashboard() {
               </nav>
             )}
           </section>
-          {puedeEvaluar && <GestionOfertas mostrarToast={mostrarToast} />}
+          {esAnalista && <GestionOfertas mostrarToast={mostrarToast} />}
         </>
       )}
 

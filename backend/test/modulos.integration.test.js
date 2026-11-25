@@ -80,6 +80,7 @@ const datosCandidato = (extra = {}) => ({
 
 const candidato = await crearPostulacion(datosCandidato(), null, 'prueba módulos');
 const token = await iniciarSesion('evaluador@modulos.cl', 'ClaveEvaluador123!');
+const tokenAnalista = await iniciarSesion('analista@modulos.cl', 'ClaveAnalista123!');
 
 test('catálogos, sesión y perfil responden a los usuarios internos', async () => {
   const publico = await peticion('GET', '/catalogos');
@@ -115,15 +116,21 @@ test('gestiona el ciclo completo de una oferta laboral', async () => {
   });
   assert.equal(sinToken.respuesta.status, 401);
 
-  const invalida = await peticion('POST', '/ofertas', {
+  const sinPermiso = await peticion('POST', '/ofertas', {
     token,
+    cuerpo: { titulo: 'No autorizada' },
+  });
+  assert.equal(sinPermiso.respuesta.status, 403);
+
+  const invalida = await peticion('POST', '/ofertas', {
+    token: tokenAnalista,
     cuerpo: { titulo: 'Incompleta', cupos: 0 },
   });
   assert.equal(invalida.respuesta.status, 400);
   assert.ok(invalida.datos.detalle.some((item) => item.campo === 'cupos'));
 
   const creacion = await peticion('POST', '/ofertas', {
-    token,
+    token: tokenAnalista,
     cuerpo: {
       titulo: 'Operador de Planta',
       descripcion: 'Operación segura de la línea de proceso.',
@@ -138,7 +145,7 @@ test('gestiona el ciclo completo de una oferta laboral', async () => {
   assert.equal(creacion.datos.oferta.cupos, 2);
   const ofertaId = creacion.datos.oferta.id;
 
-  const privadas = await peticion('GET', '/ofertas', { token });
+  const privadas = await peticion('GET', '/ofertas', { token: tokenAnalista });
   assert.equal(privadas.respuesta.status, 200);
   assert.ok(privadas.datos.total >= 1);
 
@@ -149,7 +156,7 @@ test('gestiona el ciclo completo de una oferta laboral', async () => {
   assert.equal(oculta.respuesta.status, 404);
 
   const publicacion = await peticion('PATCH', `/ofertas/${ofertaId}/estado`, {
-    token,
+    token: tokenAnalista,
     cuerpo: { estado: 'publicada' },
   });
   assert.equal(publicacion.respuesta.status, 200);
@@ -163,21 +170,21 @@ test('gestiona el ciclo completo de una oferta laboral', async () => {
   assert.equal(detalle.respuesta.status, 200);
 
   const actualizacion = await peticion('PUT', `/ofertas/${ofertaId}`, {
-    token,
+    token: tokenAnalista,
     cuerpo: { titulo: 'Operador de Planta Senior' },
   });
   assert.equal(actualizacion.respuesta.status, 200);
   assert.equal(actualizacion.datos.oferta.titulo, 'Operador de Planta Senior');
 
   const estadoInvalido = await peticion('PATCH', `/ofertas/${ofertaId}/estado`, {
-    token,
+    token: tokenAnalista,
     cuerpo: { estado: 'inventado' },
   });
   assert.equal(estadoInvalido.respuesta.status, 400);
 
-  const eliminacion = await peticion('DELETE', `/ofertas/${ofertaId}`, { token });
+  const eliminacion = await peticion('DELETE', `/ofertas/${ofertaId}`, { token: tokenAnalista });
   assert.equal(eliminacion.respuesta.status, 200);
-  const segundaEliminacion = await peticion('DELETE', `/ofertas/${ofertaId}`, { token });
+  const segundaEliminacion = await peticion('DELETE', `/ofertas/${ofertaId}`, { token: tokenAnalista });
   assert.equal(segundaEliminacion.respuesta.status, 404);
 });
 

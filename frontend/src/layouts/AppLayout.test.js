@@ -126,7 +126,7 @@ describe('AppLayout', () => {
       (nodo) => nodo.textContent,
     );
 
-    expect(textos).toEqual(['Inicio', 'Postulación', 'Consultar estado']);
+    expect(textos).toEqual(['Inicio', 'Ofertas', 'Postulación', 'Consultar estado']);
     expect(montaje.contenedor.querySelector('.navegacion').textContent).toContain(
       'Iniciar sesión',
     );

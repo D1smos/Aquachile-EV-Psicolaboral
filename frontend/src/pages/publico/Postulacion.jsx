@@ -70,16 +70,55 @@ export default function Postulacion() {
 
   useEffect(() => {
     if (!catalogo) return;
-    const ofertaId = searchParams.get('oferta_id');
+    const ofertaId = searchParams.get('oferta_id') ?? searchParams.get('ofertaId');
     const cargo = searchParams.get('cargo');
-    const familiaCargo = searchParams.get('familiaCargo') ?? searchParams.get('categoria') ?? '';
-    if (!ofertaId && !cargo && !familiaCargo) return;
+    const familiaSolicitada =
+      searchParams.get('familiaCargo') ?? searchParams.get('categoria') ?? '';
+    if (!ofertaId && !cargo && !familiaSolicitada) return;
+    const familiaCargo =
+      catalogo.familiasCargos[familiaSolicitada] !== undefined
+        ? familiaSolicitada
+        : Object.keys(catalogo.familiasCargos).find((familia) =>
+            catalogo.familiasCargos[familia].includes(cargo),
+          ) ?? '';
     setFormulario((previo) => ({
       ...previo,
       oferta_id: ofertaId ?? '',
       cargo: cargo ?? previo.cargo,
-      familiaCargo: catalogo.familiasCargos[familiaCargo] ? familiaCargo : previo.familiaCargo,
+      familiaCargo: familiaCargo || previo.familiaCargo,
     }));
+  }, [catalogo, searchParams]);
+
+  useEffect(() => {
+    const ofertaId = searchParams.get('oferta_id') ?? searchParams.get('ofertaId');
+    if (!ofertaId || searchParams.get('cargo') || typeof api.ofertaPublica !== 'function') {
+      return undefined;
+    }
+    let vigente = true;
+    const cargarOferta = async () => {
+      try {
+        const datos = await api.ofertaPublica(ofertaId);
+        if (!vigente || !datos?.oferta) return;
+        const oferta = datos.oferta;
+        const familiaCargo = catalogo?.familiasCargos[oferta.familiaCargo]
+          ? oferta.familiaCargo
+          : Object.keys(catalogo?.familiasCargos ?? {}).find((familia) =>
+              catalogo.familiasCargos[familia].includes(oferta.titulo),
+            ) ?? oferta.familiaCargo;
+        setFormulario((previo) => ({
+          ...previo,
+          oferta_id: ofertaId,
+          cargo: oferta.titulo,
+          familiaCargo: familiaCargo || previo.familiaCargo,
+        }));
+      } catch {
+        // Si la oferta no está disponible, se mantiene el formulario editable.
+      }
+    };
+    cargarOferta();
+    return () => {
+      vigente = false;
+    };
   }, [catalogo, searchParams]);
 
   const modificar = (evento) => {
@@ -206,6 +245,7 @@ export default function Postulacion() {
 
   const familias = catalogo ? Object.keys(catalogo.familiasCargos) : [];
   const cargos = catalogo?.familiasCargos[formulario.familiaCargo] ?? [];
+  const ofertaBloqueada = Boolean(formulario.oferta_id);
 
   return (
     <div className="pagina-postulacion">
@@ -302,6 +342,16 @@ export default function Postulacion() {
               <span className="bloque-numero">2</span> Cargo postulado
             </legend>
 
+            {formulario.oferta_id && formulario.cargo && (
+              <div className="aviso-oferta-postulacion" role="status">
+                <i className="bi bi-briefcase-fill" aria-hidden="true" />
+                <span>
+                  Postulando a la oferta <strong>{formulario.cargo}</strong>
+                  {formulario.familiaCargo ? ` · ${formulario.familiaCargo}` : ''}
+                </span>
+              </div>
+            )}
+
             {!catalogo && !errorCatalogo && (
               <p className="estado-carga">
                 <span className="spinner-border spinner-border-sm" aria-hidden="true" /> Cargando
@@ -327,6 +377,7 @@ export default function Postulacion() {
                     className="control-campo"
                     value={formulario.familiaCargo}
                     onChange={modificar}
+                    disabled={ofertaBloqueada}
                     aria-invalid={Boolean(errores.familiaCargo)}
                   >
                     <option value="">Selecciona una familia…</option>
@@ -345,7 +396,7 @@ export default function Postulacion() {
                     className="control-campo"
                     value={formulario.cargo}
                     onChange={modificar}
-                    disabled={!formulario.familiaCargo}
+                    disabled={ofertaBloqueada || !formulario.familiaCargo}
                     aria-invalid={Boolean(errores.cargo)}
                   >
                     <option value="">

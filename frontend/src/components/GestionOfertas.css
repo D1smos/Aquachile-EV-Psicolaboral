@@ -13,6 +13,13 @@
 .oferta-estado { padding: .25rem .55rem; border-radius: 99px; background: var(--gris-100); font-size: .78rem; text-transform: capitalize; }
 .oferta-estado.estado-publicada { color: #146c43; background: #d1e7dd; }
 .oferta-admin-acciones { justify-content: flex-end; }
+.ofertas-admin-filtros { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+.oferta-filtro { padding: .28rem .7rem; border: 1px solid var(--gris-200); border-radius: 99px; background: #fff; color: var(--gris-700); font-size: .78rem; font-weight: 600; cursor: pointer; }
+.oferta-filtro:hover { border-color: var(--aqua-300); color: var(--aqua-800); }
+.oferta-filtro.activo { border-color: var(--aqua-500); background: var(--aqua-050); color: var(--aqua-800); }
+.oferta-admin-meta { color: var(--gris-500); font-size: .78rem; }
+.oferta-admin-acciones .boton-eliminar { border-color: #e7b8b8; color: #a33a3a; }
+.oferta-admin-acciones .boton-eliminar:hover { border-color: #d99b9b; background: #fdf1f1; color: #8a2323; }
 .aviso-revision-humana, .asistencia-limitaciones { padding: .75rem; border-left: 3px solid #b7791f; border-radius: .3rem; background: #fff8e5; color: #654b12; }
 .asistencia-criterios { margin: .4rem 0 .8rem; padding-left: 1.3rem; }
 .asistencia-criterios li { margin-block: .2rem; }

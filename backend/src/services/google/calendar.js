@@ -3,8 +3,19 @@ import { entorno } from '../../config/entorno.js';
 import { ErrorHttp } from '../../utils/ErrorHttp.js';
 
 const BASE_CALENDAR = 'https://www.googleapis.com/calendar/v3';
-const BASE_EVENTS = () =>
-  `${BASE_CALENDAR}/calendars/${encodeURIComponent(entorno.google.calendarId)}/events`;
+
+const calendarioConfigurado = () =>
+  String(entorno.google.calendarId ?? '').trim() || 'primary';
+
+const calendariosCandidatos = (preferido = calendarioConfigurado()) => {
+  const configurado = String(preferido ?? '').trim() || 'primary';
+  return configurado === 'primary' ? ['primary'] : [configurado, 'primary'];
+};
+
+const urlEventos = (calendarId) =>
+  `${BASE_CALENDAR}/calendars/${encodeURIComponent(calendarId)}/events`;
+const urlEvento = (calendarId, googleEventId) =>
+  `${urlEventos(calendarId)}/${encodeURIComponent(googleEventId)}`;
 
 const tituloDe = (candidato) =>
   `Entrevista psicolaboral - ${candidato?.nombre ?? 'Candidato'} (${candidato?.folio ?? 'sin folio'})`;
@@ -59,7 +70,7 @@ const leerRespuesta = async (respuesta) => {
   if (!respuesta.ok) {
     throw new ErrorHttp(
       datos?.error?.message ?? `Google Calendar respondió HTTP ${respuesta.status}`,
-      502,
+      respuesta.status === 404 ? 404 : 502,
       [{ codigo: 'GOOGLE_CALENDAR_ERROR', mensaje: datos?.error?.message ?? 'calendar_error' }],
     );
   }
@@ -72,42 +83,75 @@ const cabeceras = (accessToken) => ({
 });
 
 export const crearEventoCalendar = async (
-  { entrevista, candidato, accessToken, fetchImpl = globalThis.fetch },
+  { entrevista, candidato, accessToken, fetchImpl = globalThis.fetch, calendarId = calendarioConfigurado() },
 ) => {
   if (!accessToken) {
     throw new ErrorHttp('No hay credenciales de Google para crear el evento', 401);
   }
-  const respuesta = await fetchImpl(
-    `${BASE_EVENTS()}?conferenceDataVersion=1&sendUpdates=all`,
-    {
-      method: 'POST',
-      headers: cabeceras(accessToken),
-      body: JSON.stringify(construirEvento(entrevista, candidato)),
-    },
-  );
-  const evento = await leerRespuesta(respuesta);
-  if (!evento?.id) {
-    throw new ErrorHttp('Google Calendar no devolvió el identificador del evento', 502);
+  const calendarios = calendariosCandidatos(calendarId);
+  for (let indice = 0; indice < calendarios.length; indice += 1) {
+    const calendarId = calendarios[indice];
+    const respuesta = await fetchImpl(
+      `${urlEventos(calendarId)}?conferenceDataVersion=1&sendUpdates=all`,
+      {
+        method: 'POST',
+        headers: cabeceras(accessToken),
+        body: JSON.stringify(construirEvento(entrevista, candidato)),
+      },
+    );
+    if (respuesta.status === 404 && indice < calendarios.length - 1) {
+      continue;
+    }
+    const evento = await leerRespuesta(respuesta);
+    if (!evento?.id) {
+      throw new ErrorHttp('Google Calendar no devolvió el identificador del evento', 502);
+    }
+    return {
+      googleEventId: evento.id,
+      meetUrl: extraerMeetUrl(evento),
+      evento,
+      calendarId,
+    };
   }
-  return { googleEventId: evento.id, meetUrl: extraerMeetUrl(evento), evento };
+  throw new ErrorHttp('No se pudo crear el evento en Google Calendar', 502);
 };
 
 export const actualizarEventoCalendar = async (
-  { googleEventId, entrevista, candidato, accessToken, fetchImpl = globalThis.fetch },
+  {
+    googleEventId,
+    entrevista,
+    candidato,
+    accessToken,
+    fetchImpl = globalThis.fetch,
+    calendarId = calendarioConfigurado(),
+  },
 ) => {
   if (!accessToken) {
     throw new ErrorHttp('No hay credenciales de Google para actualizar el evento', 401);
   }
-  const respuesta = await fetchImpl(
-    `${BASE_EVENTS()}/${encodeURIComponent(googleEventId)}?conferenceDataVersion=1&sendUpdates=all`,
-    {
-      method: 'PATCH',
-      headers: cabeceras(accessToken),
-      body: JSON.stringify(construirEvento(entrevista, candidato)),
-    },
-  );
-  const evento = await leerRespuesta(respuesta);
-  return { googleEventId: evento?.id ?? googleEventId, meetUrl: extraerMeetUrl(evento), evento };
+  for (const calendarioId of calendariosCandidatos(calendarId)) {
+    const respuesta = await fetchImpl(
+      `${urlEvento(calendarioId, googleEventId)}?conferenceDataVersion=1&sendUpdates=all`,
+      {
+        method: 'PATCH',
+        headers: cabeceras(accessToken),
+        body: JSON.stringify(construirEvento(entrevista, candidato)),
+      },
+    );
+    if (respuesta.status === 404) {
+      continue;
+    }
+    const evento = await leerRespuesta(respuesta);
+    return {
+      googleEventId: evento?.id ?? googleEventId,
+      meetUrl: extraerMeetUrl(evento),
+      evento,
+      calendarId: calendarioId,
+    };
+  }
+  throw new ErrorHttp('El evento no existe en Google Calendar', 404, [
+    { codigo: 'GOOGLE_EVENT_NOT_FOUND', mensaje: 'event_not_found' },
+  ]);
 };
 
 export const eliminarEventoCalendar = async (
@@ -117,7 +161,7 @@ export const eliminarEventoCalendar = async (
     throw new ErrorHttp('No hay credenciales de Google para eliminar el evento', 401);
   }
   const respuesta = await fetchImpl(
-    `${BASE_EVENTS()}/${encodeURIComponent(googleEventId)}?sendUpdates=all`,
+    `${urlEvento(calendarioConfigurado(), googleEventId)}?sendUpdates=all`,
     { method: 'DELETE', headers: cabeceras(accessToken) },
   );
   if (!respuesta.ok && respuesta.status !== 404) {

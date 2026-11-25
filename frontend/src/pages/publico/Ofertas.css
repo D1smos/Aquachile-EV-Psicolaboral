@@ -12,7 +12,14 @@
 .ofertas-vacio > i { font-size: 2rem; color: var(--aqua-700); }
 .oferta-overlay { z-index: 1100; }
 .oferta-detalle { width: min(100%, 760px); max-height: min(90vh, 900px); overflow: auto; }
-.oferta-detalle .modal-cabecera { position: sticky; top: 0; z-index: 1; background: #fff; }
+.oferta-detalle .modal-cabecera { position: sticky; top: 0; z-index: 1; background: #fff; color: #0b2e4e; border-bottom: 1px solid var(--gris-200); }
+.oferta-detalle .modal-titulo { color: #0b2e4e; }
+.oferta-detalle .modal-eyebrow { color: #3d5a73; }
+.oferta-detalle .modal-cabecera p { color: #3d5a73; }
+.oferta-detalle .modal-cabecera .boton-icono { background: #eef3f8; border-color: #c7d5e2; color: #0b2e4e; }
+.oferta-detalle .modal-cabecera .boton-icono:hover { background: #e2eaf2; border-color: #a9bdce; color: #08243d; }
+.oferta-detalle-acciones .enlace-consulta-hero { color: #0b2e4e; text-decoration-color: rgba(11, 46, 78, 0.45); }
+.oferta-detalle-acciones .enlace-consulta-hero:hover { color: #08243d; text-decoration-color: #08243d; }
 .oferta-detalle-cuerpo { display: grid; gap: 1rem; }
 .oferta-detalle-bloque h3, .oferta-sueldo strong { margin: 0 0 .3rem; font-size: 1rem; color: var(--aqua-900); }
 .oferta-detalle-bloque p { margin: 0; white-space: pre-line; }

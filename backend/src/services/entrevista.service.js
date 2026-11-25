@@ -92,19 +92,42 @@ const sincronizarConGoogle = async (entrevista, { usuarioEmail = null, fetchImpl
 
   const candidato = await obtenerCandidato(entrevista.candidatoId);
   try {
-    const resultado = entrevista.googleEventId
-      ? await actualizarEventoCalendar({
+    let resultado;
+    let recreada = false;
+    if (entrevista.googleEventId) {
+      try {
+        resultado = await actualizarEventoCalendar({
           googleEventId: entrevista.googleEventId,
           entrevista,
           candidato,
           accessToken,
           fetchImpl,
-        })
-      : await crearEventoCalendar({ entrevista, candidato, accessToken, fetchImpl });
+        });
+      } catch (error) {
+        if (error?.codigo !== 404) {
+          throw error;
+        }
+        recreada = true;
+        await dbEntrevistas.actualizar(entrevista.id, {
+          googleEventId: null,
+          meetUrl: null,
+          estadoSync: ESTADOS_SYNC_CALENDAR.PENDIENTE,
+          errorSync: null,
+        });
+        resultado = await crearEventoCalendar({
+          entrevista: { ...entrevista, googleEventId: null, meetUrl: null },
+          candidato,
+          accessToken,
+          fetchImpl,
+        });
+      }
+    } else {
+      resultado = await crearEventoCalendar({ entrevista, candidato, accessToken, fetchImpl });
+    }
     const actualizada = await dbEntrevistas.actualizar(entrevista.id, {
       estadoSync: ESTADOS_SYNC_CALENDAR.SINCRONIZADA,
       googleEventId: resultado.googleEventId,
-      meetUrl: resultado.meetUrl ?? entrevista.meetUrl ?? null,
+      meetUrl: resultado.meetUrl ?? (recreada ? null : entrevista.meetUrl ?? null),
       errorSync: null,
     });
     return { entrevista: await enriquecer(actualizada), sincronizada: true };

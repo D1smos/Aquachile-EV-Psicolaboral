@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import Marca from './Marca.jsx';
@@ -23,11 +23,23 @@ export default function Sidebar({ abierto = false, onCerrar }) {
   const { usuario, cerrarSesion } = useAuth();
   const { mostrarToast } = useToast();
   const navegar = useNavigate();
+  const { pathname, hash } = useLocation();
   const [activa, setActiva] = useState('resumen');
 
   const rol = usuario?.rol === 'psicologo' ? 'Evaluador' : 'Analista';
+  const esAnalista = usuario?.rol === 'analista';
+  const enDashboard = pathname.startsWith('/dashboard');
+  const seccionActiva = pathname.startsWith('/candidatos/')
+    ? 'candidatos'
+    : enDashboard
+      ? activa
+      : null;
 
   useEffect(() => {
+    if (!enDashboard) {
+      return undefined;
+    }
+
     const actualizar = () => {
       const metricas = document.getElementById('metricas');
       const candidatos = document.getElementById('candidatos');
@@ -60,18 +72,42 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       window.removeEventListener('resize', actualizar);
       observador?.disconnect();
     };
-  }, []);
+  }, [enDashboard]);
+
+  useEffect(() => {
+    if (!enDashboard) {
+      return;
+    }
+    const destino = hash.replace('#', '');
+    if (!destino) {
+      setActiva('resumen');
+      return;
+    }
+    setActiva(destino);
+    window.requestAnimationFrame(() => {
+      document.getElementById(destino)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [enDashboard, hash]);
 
   const irASeccion = (id) => {
-    setActiva(id);
     onCerrar?.();
+
+    if (!enDashboard) {
+      navegar(`/dashboard#${id}`);
+      return;
+    }
+
+    setActiva(id);
+    navegar({ pathname: '/dashboard', hash: id === 'resumen' ? '' : id }, { replace: true });
 
     if (id === 'resumen') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const salir = () => {
@@ -103,8 +139,8 @@ export default function Sidebar({ abierto = false, onCerrar }) {
           <button
             key={seccion.id}
             type="button"
-            className={`menu-enlace${activa === seccion.id ? ' activo' : ''}`}
-            aria-current={activa === seccion.id ? 'true' : undefined}
+            className={`menu-enlace${seccionActiva === seccion.id ? ' activo' : ''}`}
+            aria-current={seccionActiva === seccion.id ? 'true' : undefined}
             onClick={() => irASeccion(seccion.id)}
           >
             <i className={`bi ${seccion.icono}`} aria-hidden="true" />
@@ -114,14 +150,33 @@ export default function Sidebar({ abierto = false, onCerrar }) {
       </nav>
 
       <div className="menu-secundario">
-        <Link to="/agenda" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+        {esAnalista && (
+          <button
+            type="button"
+            className={`menu-enlace menu-enlace-suave${hash === '#ofertas-admin' ? ' activo' : ''}`}
+            aria-current={hash === '#ofertas-admin' ? 'true' : undefined}
+            onClick={() => irASeccion('ofertas-admin')}
+          >
+            <i className="bi bi-briefcase-fill" aria-hidden="true" />
+            <span>Ofertas</span>
+          </button>
+        )}
+        <NavLink
+          to="/agenda"
+          className={({ isActive }) => `menu-enlace menu-enlace-suave${isActive ? ' activo' : ''}`}
+          onClick={onCerrar}
+        >
           <i className="bi bi-calendar2-week" aria-hidden="true" />
           <span>Agenda</span>
-        </Link>
-        <Link to="/documentos" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
+        </NavLink>
+        <NavLink
+          to="/documentos"
+          className={({ isActive }) => `menu-enlace menu-enlace-suave${isActive ? ' activo' : ''}`}
+          onClick={onCerrar}
+        >
           <i className="bi bi-folder2-open" aria-hidden="true" />
           <span>Documentos</span>
-        </Link>
+        </NavLink>
         <Link to="/" className="menu-enlace menu-enlace-suave" onClick={onCerrar}>
           <i className="bi bi-globe2" aria-hidden="true" />
           <span>Sitio público</span>

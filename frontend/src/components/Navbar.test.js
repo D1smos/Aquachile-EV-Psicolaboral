@@ -65,7 +65,7 @@ describe('Navbar', () => {
       (nodo) => nodo.textContent,
     );
 
-    expect(enlaces).toEqual(['Inicio', 'Postulación', 'Consultar estado']);
+    expect(enlaces).toEqual(['Inicio', 'Ofertas', 'Postulación', 'Consultar estado']);
     expect(montaje.contenedor.textContent).toContain('Iniciar sesión');
     expect(montaje.contenedor.querySelector('a[href="/dashboard"]')).toBeNull();
   });

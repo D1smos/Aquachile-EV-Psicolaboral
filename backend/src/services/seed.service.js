@@ -93,8 +93,8 @@ const sembrarOfertas = async () => {
   if ((await dbOfertas.contar()) > 0) return;
   const ahora = new Date().toISOString();
   for (const oferta of [
-    { id: 'oferta-demo-operador', titulo: 'Operador de Planta', descripcion: 'Operación segura de línea de proceso.', ubicacion: 'Puerto Montt', categoria: 'Operaciones', familiaCargo: 'Operaciones', modalidad: 'Presencial', funciones: 'Operar y monitorear la línea de proceso.', requisitos: 'Experiencia en planta y trabajo por turnos.', beneficios: 'Capacitación y beneficios corporativos.', sueldo: 'A convenir' },
-    { id: 'oferta-demo-analista', titulo: 'Analista de Sistemas', descripcion: 'Soporte y mejora de sistemas operacionales.', ubicacion: 'Puerto Montt', categoria: 'Tecnología', familiaCargo: 'Tecnología', modalidad: 'Híbrida', funciones: 'Analizar y mantener sistemas operacionales.', requisitos: 'Formación técnica o profesional en informática.', beneficios: 'Seguro complementario.', sueldo: 'A convenir' },
+    { id: 'oferta-demo-operador', titulo: 'Operador de Planta', descripcion: 'Operación segura de línea de proceso.', ubicacion: 'Puerto Montt', categoria: 'Operaciones', familiaCargo: 'Operario Calificado', modalidad: 'Presencial', funciones: 'Operar y monitorear la línea de proceso.', requisitos: 'Experiencia en planta y trabajo por turnos.', beneficios: 'Capacitación y beneficios corporativos.', sueldo: 'A convenir' },
+    { id: 'oferta-demo-analista', titulo: 'Analista de Sistemas', descripcion: 'Soporte y mejora de sistemas operacionales.', ubicacion: 'Puerto Montt', categoria: 'Tecnología', familiaCargo: 'Profesional B/C', modalidad: 'Híbrida', funciones: 'Analizar y mantener sistemas operacionales.', requisitos: 'Formación técnica o profesional en informática.', beneficios: 'Seguro complementario.', sueldo: 'A convenir' },
   ]) {
     await dbOfertas.insertar({ ...oferta, fechaPublicacion: ahora.slice(0, 10), cupos: 1, estado: 'publicada', creadoEn: ahora, actualizadoEn: ahora });
   }

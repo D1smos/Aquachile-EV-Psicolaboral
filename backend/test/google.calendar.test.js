@@ -98,6 +98,70 @@ test('actualiza el evento usando PATCH', async () => {
   assert.equal(resultado.meetUrl, 'https://meet.google.com/xyz');
 });
 
+test('crea el evento en primary cuando el calendario configurado no existe', async () => {
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    if (urls.length === 1) {
+      return { ok: false, status: 404, json: async () => ({ error: { message: 'Not Found' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ id: 'evento-primary' }) };
+  };
+  const resultado = await crearEventoCalendar({
+    entrevista,
+    candidato,
+    accessToken: 'token',
+    fetchImpl,
+    calendarId: 'calendario-inexistente',
+  });
+  assert.equal(resultado.googleEventId, 'evento-primary');
+  assert.equal(resultado.calendarId, 'primary');
+  assert.match(urls[0], /calendars\/calendario-inexistente\/events/);
+  assert.match(urls[1], /calendars\/primary\/events/);
+});
+
+test('actualiza en primary si el calendario configurado no existe', async () => {
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    if (urls.length === 1) {
+      return { ok: false, status: 404, json: async () => ({ error: { message: 'Not Found' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ id: 'evento-primary' }) };
+  };
+  const resultado = await actualizarEventoCalendar({
+    googleEventId: 'evento-123',
+    entrevista,
+    candidato,
+    accessToken: 'token',
+    fetchImpl,
+    calendarId: 'calendario-inexistente',
+  });
+  assert.equal(resultado.googleEventId, 'evento-primary');
+  assert.equal(resultado.calendarId, 'primary');
+  assert.match(urls[1], /calendars\/primary\/events/);
+});
+
+test('actualizar un evento inexistente devuelve 404 para recrearlo', async () => {
+  const fetchImpl = async () => ({
+    ok: false,
+    status: 404,
+    json: async () => ({ error: { message: 'Not Found' } }),
+  });
+  await assert.rejects(
+    () =>
+      actualizarEventoCalendar({
+        googleEventId: 'evento-borrado',
+        entrevista,
+        candidato,
+        accessToken: 'token',
+        fetchImpl,
+        calendarId: 'primary',
+      }),
+    (error) => error.codigo === 404,
+  );
+});
+
 test('propaga el error de Google al sincronizar', async () => {
   const fetchImpl = async () => ({
     ok: false,

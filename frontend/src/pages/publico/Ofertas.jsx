@@ -46,7 +46,7 @@ export default function Ofertas() {
   };
 
   const postular = () => {
-    const query = new URLSearchParams({ oferta_id: detalle.id, cargo: detalle.titulo, categoria: detalle.categoria, familiaCargo: detalle.familiaCargo ?? detalle.categoria });
+    const query = new URLSearchParams({ oferta_id: detalle.id, ofertaId: detalle.id, cargo: detalle.titulo, categoria: detalle.categoria, familiaCargo: detalle.familiaCargo ?? detalle.categoria });
     navegar(`/postulacion?${query}`);
     setDetalle(null);
   };
@@ -86,7 +86,7 @@ export default function Ofertas() {
                 <div className="oferta-card-top"><span className="oferta-categoria">{oferta.categoria}</span><span>{oferta.modalidad}</span></div>
                 <h2>{oferta.titulo}</h2><p>{oferta.ubicacion}</p>
                 <p className="oferta-resumen">{oferta.descripcion}</p>
-                <div className="oferta-card-pie"><small>{oferta.cupos} {oferta.cupos === 1 ? 'cupo' : 'cupos'} · publicada {fecha(oferta.fechaPublicacion)}</small><button type="button" className="boton boton-secundario boton-sm" onClick={() => abrirDetalle(oferta.id)}>Ver detalles</button></div>
+                <div className="oferta-card-pie"><small>{oferta.cupos} {oferta.cupos === 1 ? 'cupo' : 'cupos'}{oferta.fechaPublicacion ? ` · Publicada ${fecha(oferta.fechaPublicacion)}` : ''}{oferta.sueldo ? ` · ${oferta.sueldo}` : ''}</small><button type="button" className="boton boton-secundario boton-sm" onClick={() => abrirDetalle(oferta.id)}>Ver detalles</button></div>
               </article>
             ))}
           </div>

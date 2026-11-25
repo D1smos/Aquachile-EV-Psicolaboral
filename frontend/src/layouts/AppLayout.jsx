@@ -22,6 +22,7 @@ export default function AppLayout() {
   const privada =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/documentos') ||
+    pathname.startsWith('/agenda') ||
     pathname.startsWith('/candidatos/');
   const temaRol = claseTemaRol(usuario?.rol);
   const [menuAbierto, setMenuAbierto] = useState(false);
